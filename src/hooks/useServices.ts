@@ -10,20 +10,14 @@ export const useServices = () => {
         .from('services')
         .select(`
           *,
-          provider:service_providers(
-            id,
-            business_name,
-            business_address,
-            business_phone,
-            rating,
-            total_reviews
-          ),
-          category:service_categories(name)
+          provider:service_providers!fk_services_provider_id(*),
+          category:service_categories!fk_services_category_id(*)
         `)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 };
@@ -32,20 +26,14 @@ export const useService = (serviceId: string) => {
   return useQuery({
     queryKey: ['service', serviceId],
     queryFn: async () => {
+      if (!serviceId) throw new Error('Service ID is required');
+      
       const { data, error } = await supabase
         .from('services')
         .select(`
           *,
-          provider:service_providers(
-            id,
-            business_name,
-            business_description,
-            business_address,
-            business_phone,
-            rating,
-            total_reviews
-          ),
-          category:service_categories(name)
+          provider:service_providers!fk_services_provider_id(*),
+          category:service_categories!fk_services_category_id(*)
         `)
         .eq('id', serviceId)
         .single();

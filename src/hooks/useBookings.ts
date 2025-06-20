@@ -15,8 +15,8 @@ export const useBookings = () => {
         .from('bookings')
         .select(`
           *,
-          service:services!bookings_service_id_fkey(*),
-          provider:service_providers!bookings_provider_id_fkey(*)
+          service:services!fk_bookings_service_id(*),
+          provider:service_providers!fk_bookings_provider_id(*)
         `)
         .eq('client_id', user.id)
         .order('appointment_date', { ascending: false });
