@@ -12,10 +12,12 @@ interface AuthUser extends Profile {
 
 interface AuthContextType {
   user: AuthUser | null;
+  profile: AuthUser | null;  // Added profile property
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
+  signOut: () => Promise<void>;  // Added signOut alias
   loading: boolean;
 }
 
@@ -137,8 +139,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // signOut alias for logout
+  const signOut = logout;
+
   return (
-    <AuthContext.Provider value={{ user, session, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile: user, // profile is same as user 
+      session, 
+      login, 
+      register, 
+      logout, 
+      signOut, 
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

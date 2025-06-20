@@ -55,10 +55,9 @@ const ProviderDashboard = () => {
     new Date(booking.appointment_date) > new Date()
   );
 
-  const totalEarnings = earnings.reduce((sum, earning) => sum + parseFloat(earning.net_amount), 0);
-  const pendingEarnings = earnings
-    .filter(earning => earning.status === 'pending')
-    .reduce((sum, earning) => sum + parseFloat(earning.net_amount), 0);
+  // Simplified earnings calculation since earnings table isn't available yet
+  const totalEarnings = 0;
+  const pendingEarnings = 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
