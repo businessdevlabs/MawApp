@@ -85,13 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Starting registration process...', {
         email,
         name,
+        password,
         role,
         redirectUrl
       });
 
-      console.log('email',
-        'password', email,
-        password,)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
