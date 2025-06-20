@@ -17,6 +17,9 @@ import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderProfile from "./pages/provider/ProviderProfile";
 import ProviderBookings from "./pages/provider/ProviderBookings";
 import ProviderSchedule from "./pages/provider/ProviderSchedule";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import SystemSettings from "./pages/admin/SystemSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +46,11 @@ const App = () => (
               <Route path="/provider/profile" element={<ProviderProfile />} />
               <Route path="/provider/bookings" element={<ProviderBookings />} />
               <Route path="/provider/schedule" element={<ProviderSchedule />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/settings" element={<SystemSettings />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

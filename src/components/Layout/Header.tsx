@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, User, LogOut, Settings, Store, Clock, BarChart3 } from 'lucide-react';
+import { Calendar, User, LogOut, Settings, Store, Clock, BarChart3, Shield, Users } from 'lucide-react';
 
 const Header = () => {
   const { user, profile, signOut } = useAuth();
@@ -22,7 +22,9 @@ const Header = () => {
   };
 
   const isProviderRoute = location.pathname.startsWith('/provider');
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const isProvider = profile?.role === 'provider';
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -38,7 +40,21 @@ const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            {!isProviderRoute ? (
+            {isAdminRoute ? (
+              isAdmin && (
+                <>
+                  <Link to="/admin/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Dashboard
+                  </Link>
+                  <Link to="/admin/users" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Users
+                  </Link>
+                  <Link to="/admin/settings" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Settings
+                  </Link>
+                </>
+              )
+            ) : !isProviderRoute ? (
               <>
                 <Link to="/services" className="text-gray-600 hover:text-gray-900 transition-colors">
                   Services
@@ -95,7 +111,17 @@ const Header = () => {
                   <DropdownMenuSeparator />
                   
                   {/* Role-based navigation */}
-                  {isProvider && !isProviderRoute && (
+                  {isAdmin && !isAdminRoute && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+
+                  {isProvider && !isProviderRoute && !isAdminRoute && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/provider/dashboard')}>
                         <Store className="mr-2 h-4 w-4" />
@@ -105,7 +131,7 @@ const Header = () => {
                     </>
                   )}
                   
-                  {isProviderRoute && (
+                  {(isProviderRoute || isAdminRoute) && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/services')}>
                         <Calendar className="mr-2 h-4 w-4" />
@@ -120,7 +146,7 @@ const Header = () => {
                     Profile
                   </DropdownMenuItem>
                   
-                  {!isProviderRoute && (
+                  {!isProviderRoute && !isAdminRoute && (
                     <DropdownMenuItem onClick={() => navigate('/bookings')}>
                       <Calendar className="mr-2 h-4 w-4" />
                       My Bookings
