@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, LogOut, Settings, User } from 'lucide-react';
+import { Calendar, LogOut, Settings, User, BookOpen } from 'lucide-react';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -32,6 +32,11 @@ const Header = () => {
           <Link to="/services" className="text-gray-600 hover:text-blue-600 transition-colors">
             Services
           </Link>
+          {user && (
+            <Link to="/bookings" className="text-gray-600 hover:text-blue-600 transition-colors">
+              My Bookings
+            </Link>
+          )}
           <Link to="/providers" className="text-gray-600 hover:text-blue-600 transition-colors">
             Providers
           </Link>
@@ -55,6 +60,10 @@ const Header = () => {
                 <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                   <User className="mr-2 h-4 w-4" />
                   Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/bookings')}>
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  My Bookings
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <Settings className="mr-2 h-4 w-4" />

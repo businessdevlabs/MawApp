@@ -1,8 +1,12 @@
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useServices } from '@/hooks/useServices';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Search, 
   Filter, 
@@ -17,111 +21,52 @@ import {
 } from 'lucide-react';
 
 const Services = () => {
+  const navigate = useNavigate();
+  const { data: services, isLoading } = useServices();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const categories = [
     { id: 'all', name: 'All Services', icon: Users },
-    { id: 'beauty', name: 'Beauty & Hair', icon: Scissors },
-    { id: 'fitness', name: 'Fitness', icon: Dumbbell },
-    { id: 'wellness', name: 'Spa & Wellness', icon: Heart },
-    { id: 'nails', name: 'Nails & Beauty', icon: Palette },
-    { id: 'health', name: 'Health & Therapy', icon: Heart }
+    { id: 'Beauty & Hair', name: 'Beauty & Hair', icon: Scissors },
+    { id: 'Fitness', name: 'Fitness', icon: Dumbbell },
+    { id: 'Wellness', name: 'Spa & Wellness', icon: Heart },
+    { id: 'Nails', name: 'Nails & Beauty', icon: Palette },
+    { id: 'Health', name: 'Health & Therapy', icon: Heart }
   ];
 
-  const services = [
-    {
-      id: 1,
-      name: "Premium Hair Salon",
-      category: "beauty",
-      description: "Professional hair cutting, styling, and coloring services",
-      image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400",
-      rating: 4.9,
-      reviews: 128,
-      price: "From $45",
-      duration: "1-2 hours",
-      distance: "0.5 mi",
-      availability: "Available today",
-      services: ["Hair Cut", "Hair Color", "Styling", "Treatments"]
-    },
-    {
-      id: 2,
-      name: "Elite Fitness Center",
-      category: "fitness",
-      description: "Personal training, group classes, and fitness coaching",
-      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400",
-      rating: 4.8,
-      reviews: 89,
-      price: "From $30",
-      duration: "45-60 mins",
-      distance: "1.2 mi",
-      availability: "Next available: Tomorrow",
-      services: ["Personal Training", "Group Classes", "Nutrition Coaching"]
-    },
-    {
-      id: 3,
-      name: "Serenity Spa & Wellness",
-      category: "wellness",
-      description: "Relaxing massage therapy and wellness treatments",
-      image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400",
-      rating: 4.9,
-      reviews: 156,
-      price: "From $75",
-      duration: "60-90 mins",
-      distance: "0.8 mi",
-      availability: "Available today",
-      services: ["Massage", "Facial", "Body Treatments", "Aromatherapy"]
-    },
-    {
-      id: 4,
-      name: "Nail Art Studio",
-      category: "nails",
-      description: "Creative nail designs and professional manicures",
-      image: "https://images.unsplash.com/photo-1604654894610-df63bc138bb8?w=400",
-      rating: 4.7,
-      reviews: 93,
-      price: "From $25",
-      duration: "30-60 mins",
-      distance: "0.3 mi",
-      availability: "Available today",
-      services: ["Manicure", "Pedicure", "Nail Art", "Extensions"]
-    },
-    {
-      id: 5,
-      name: "Wellness Therapy Center",
-      category: "health",
-      description: "Physical therapy and rehabilitation services",
-      image: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400",
-      rating: 4.8,
-      reviews: 67,
-      price: "From $85",
-      duration: "45-60 mins",
-      distance: "1.5 mi",
-      availability: "Next available: Tomorrow",
-      services: ["Physical Therapy", "Massage Therapy", "Rehabilitation"]
-    },
-    {
-      id: 6,
-      name: "Urban Barbershop",
-      category: "beauty",
-      description: "Classic and modern men's grooming services",
-      image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400",
-      rating: 4.6,
-      reviews: 112,
-      price: "From $35",
-      duration: "30-45 mins",
-      distance: "0.7 mi",
-      availability: "Available today",
-      services: ["Haircut", "Beard Trim", "Shave", "Styling"]
-    }
-  ];
-
-  const filteredServices = services.filter(service => {
+  const filteredServices = services?.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
+                         service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         service.provider?.business_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || service.category?.name === selectedCategory;
     return matchesSearch && matchesCategory;
-  });
+  }) || [];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="mb-8">
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <Skeleton className="h-48 w-full" />
+                <CardContent className="p-6">
+                  <Skeleton className="h-6 w-full mb-2" />
+                  <Skeleton className="h-4 w-3/4 mb-4" />
+                  <Skeleton className="h-8 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -171,20 +116,17 @@ const Services = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((service) => (
             <Card key={service.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-              <div className="relative h-48 overflow-hidden">
-                <img 
-                  src={service.image} 
-                  alt={service.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-4 right-4">
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/90 hover:bg-white">
-                    <Heart className="w-4 h-4" />
-                  </Button>
+              <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                <div className="text-6xl opacity-20">
+                  {service.category?.name === 'Beauty & Hair' && '💇'}
+                  {service.category?.name === 'Fitness' && '💪'}
+                  {service.category?.name === 'Wellness' && '🧘'}
+                  {service.category?.name === 'Health' && '🏥'}
+                  {!service.category && '⭐'}
                 </div>
                 <div className="absolute bottom-4 left-4">
                   <Badge className="bg-white/90 text-gray-900">
-                    {service.availability}
+                    Available
                   </Badge>
                 </div>
               </div>
@@ -194,35 +136,39 @@ const Services = () => {
                   <h3 className="font-semibold text-lg">{service.name}</h3>
                   <div className="flex items-center text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
-                    <span className="ml-1 text-sm font-medium text-gray-900">{service.rating}</span>
-                    <span className="ml-1 text-sm text-gray-500">({service.reviews})</span>
+                    <span className="ml-1 text-sm font-medium text-gray-900">
+                      {service.provider?.rating || 4.8}
+                    </span>
+                    <span className="ml-1 text-sm text-gray-500">
+                      ({service.provider?.total_reviews || 0})
+                    </span>
                   </div>
                 </div>
                 
                 <p className="text-gray-600 text-sm mb-3">{service.description}</p>
                 
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {service.services.map((item, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {item}
-                    </Badge>
-                  ))}
+                <div className="mb-4">
+                  <Badge variant="outline" className="text-xs">
+                    {service.category?.name || 'General'}
+                  </Badge>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
                   <div className="flex items-center">
                     <MapPin className="w-4 h-4 mr-2" />
-                    {service.distance}
+                    <span className="truncate">{service.provider?.business_name}</span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2" />
-                    {service.duration}
+                    {service.duration_minutes} min
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-blue-600 text-lg">{service.price}</span>
-                  <Button>
+                  <span className="font-semibold text-blue-600 text-lg">
+                    ${service.price}
+                  </span>
+                  <Button onClick={() => navigate(`/service/${service.id}`)}>
                     Book Now
                   </Button>
                 </div>
