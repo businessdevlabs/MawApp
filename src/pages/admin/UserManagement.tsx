@@ -10,6 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Mail, Phone, Calendar, Ban, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { Database } from '@/integrations/supabase/types';
+
+type ProviderStatus = Database['public']['Enums']['provider_status'];
 
 const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +49,7 @@ const UserManagement = () => {
   });
 
   const updateProviderStatus = useMutation({
-    mutationFn: async ({ providerId, status }: { providerId: string; status: string }) => {
+    mutationFn: async ({ providerId, status }: { providerId: string; status: ProviderStatus }) => {
       const { error } = await supabase
         .from('service_providers')
         .update({ status })
@@ -80,7 +83,7 @@ const UserManagement = () => {
     provider.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleProviderStatusUpdate = (providerId: string, status: string) => {
+  const handleProviderStatusUpdate = (providerId: string, status: ProviderStatus) => {
     updateProviderStatus.mutate({ providerId, status });
   };
 
