@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, User, LogOut, Settings, Store, Clock, BarChart3, Shield, Users } from 'lucide-react';
+import { Calendar, User, LogOut, Settings, Store, Clock, BarChart3, Shield, Users, List } from 'lucide-react';
 
 const Header = () => {
   const { user, profile, signOut } = useAuth();
@@ -70,6 +70,9 @@ const Header = () => {
                 <>
                   <Link to="/provider/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
                     Dashboard
+                  </Link>
+                  <Link to="/provider/services" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    Services
                   </Link>
                   <Link to="/provider/bookings" className="text-gray-600 hover:text-gray-900 transition-colors">
                     Appointments

@@ -17,6 +17,7 @@ import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderProfile from "./pages/provider/ProviderProfile";
 import ProviderBookings from "./pages/provider/ProviderBookings";
 import ProviderSchedule from "./pages/provider/ProviderSchedule";
+import ProviderServices from "./pages/provider/ProviderServices";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/provider/profile" element={<ProviderProfile />} />
               <Route path="/provider/bookings" element={<ProviderBookings />} />
               <Route path="/provider/schedule" element={<ProviderSchedule />} />
+              <Route path="/provider/services" element={<ProviderServices />} />
               
               {/* Admin Routes */}
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
