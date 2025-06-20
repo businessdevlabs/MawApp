@@ -20,7 +20,7 @@ import { format, parseISO, isPast } from 'date-fns';
 
 const MyBookings = () => {
   const { user } = useAuth();
-  const { data: bookings, isLoading } = useBookings(user?.id);
+  const { data: bookings, isLoading } = useBookings();
   const updateBooking = useUpdateBooking();
   const { toast } = useToast();
 
@@ -28,7 +28,7 @@ const MyBookings = () => {
     try {
       await updateBooking.mutateAsync({
         id: bookingId,
-        updates: { status: 'cancelled' }
+        status: 'cancelled'
       });
       
       toast({

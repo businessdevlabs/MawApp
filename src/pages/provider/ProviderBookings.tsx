@@ -20,7 +20,7 @@ const ProviderBookings = () => {
 
   const handleStatusUpdate = async (bookingId: string, status: BookingStatus) => {
     try {
-      await updateBookingStatus.mutateAsync({ bookingId, status });
+      await updateBookingStatus.mutateAsync({ id: bookingId, status });
       toast({
         title: "Booking updated",
         description: `Booking status updated to ${status}.`,

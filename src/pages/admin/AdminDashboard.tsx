@@ -45,9 +45,9 @@ const AdminDashboard = () => {
         .from('bookings')
         .select(`
           *,
-          service:services(name),
-          client:profiles!client_id(full_name),
-          provider:service_providers(business_name)
+          service:services!fk_bookings_service_id(name),
+          client:profiles!fk_bookings_client_id(full_name),
+          provider:service_providers!fk_bookings_provider_id(business_name)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -64,7 +64,7 @@ const AdminDashboard = () => {
         .from('service_providers')
         .select(`
           *,
-          user:profiles(full_name, email)
+          user:profiles!fk_service_providers_user_id(full_name, email)
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -196,8 +196,8 @@ const AdminDashboard = () => {
                       <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
                           <p className="font-medium">{booking.client?.full_name || 'Unknown Client'}</p>
-                          <p className="text-sm text-gray-600">{booking.service?.name}</p>
-                          <p className="text-sm text-gray-500">{booking.provider?.business_name}</p>
+                          <p className="text-sm text-gray-600">{booking.service?.name || 'Unknown Service'}</p>
+                          <p className="text-sm text-gray-500">{booking.provider?.business_name || 'Unknown Provider'}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-medium">${booking.total_price}</p>

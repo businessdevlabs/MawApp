@@ -58,15 +58,13 @@ const BookingForm = ({ service }: BookingFormProps) => {
 
     try {
       await createBooking.mutateAsync({
-        client_id: user.id,
         provider_id: service.provider.id,
         service_id: service.id,
         appointment_date: format(selectedDate, 'yyyy-MM-dd'),
         appointment_time: selectedTime,
         duration_minutes: service.duration_minutes,
         total_price: service.price,
-        notes: notes || null,
-        status: 'pending',
+        notes: notes || undefined,
       });
 
       toast({
