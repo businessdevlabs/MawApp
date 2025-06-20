@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ import {
   Clock, 
   Scissors, 
   Dumbbell, 
-  Spa,
   Heart,
   Users,
   Palette
@@ -26,7 +24,7 @@ const Services = () => {
     { id: 'all', name: 'All Services', icon: Users },
     { id: 'beauty', name: 'Beauty & Hair', icon: Scissors },
     { id: 'fitness', name: 'Fitness', icon: Dumbbell },
-    { id: 'wellness', name: 'Spa & Wellness', icon: Spa },
+    { id: 'wellness', name: 'Spa & Wellness', icon: Heart },
     { id: 'nails', name: 'Nails & Beauty', icon: Palette },
     { id: 'health', name: 'Health & Therapy', icon: Heart }
   ];
