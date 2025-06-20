@@ -59,7 +59,8 @@ const Register = () => {
         name: formData.name,
         role: formData.role
       });
-      
+
+      console.log('email2', formData.email, formData.password, formData.name, formData.role))
       await register(formData.email, formData.password, formData.name, formData.role);
       
       toast({
