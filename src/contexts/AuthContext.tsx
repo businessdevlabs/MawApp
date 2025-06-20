@@ -82,6 +82,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const redirectUrl = `${window.location.origin}/`;
       
+      console.log('Starting registration process...', {
+        email,
+        name,
+        role,
+        redirectUrl
+      });
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -94,10 +101,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase registration error:', error);
+        throw error;
+      }
 
-      // The profile will be created automatically by the trigger
       console.log('Registration successful:', data.user?.email);
+      
+      if (data.user && !data.session) {
+        // User needs to confirm email
+        throw new Error('Please check your email and click the confirmation link to complete registration.');
+      }
+      
     } catch (error: any) {
       console.error('Registration error:', error);
       throw new Error(error.message || 'Registration failed');

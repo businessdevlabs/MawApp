@@ -54,16 +54,36 @@ const Register = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting registration with data:', {
+        email: formData.email,
+        name: formData.name,
+        role: formData.role
+      });
+      
       await register(formData.email, formData.password, formData.name, formData.role);
+      
       toast({
         title: "Account created!",
         description: "Welcome to BookEase. Your account has been created successfully.",
       });
-      navigate(formData.role === 'provider' ? '/provider-dashboard' : '/dashboard');
-    } catch (error) {
+      
+      navigate(formData.role === 'provider' ? '/provider/dashboard' : '/dashboard');
+    } catch (error: any) {
+      console.error('Registration error details:', error);
+      
+      let errorMessage = "Please try again with different credentials.";
+      
+      if (error.message?.includes("Database error")) {
+        errorMessage = "There was a database issue. Please try again in a moment.";
+      } else if (error.message?.includes("already registered")) {
+        errorMessage = "This email is already registered. Please try logging in instead.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Registration failed",
-        description: "Please try again with different credentials.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
