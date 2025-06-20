@@ -1,7 +1,9 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Database } from '@/integrations/supabase/types';
+
+type BookingStatus = Database['public']['Enums']['booking_status'];
 
 export const useProviderProfile = () => {
   const { user } = useAuth();
@@ -91,7 +93,7 @@ export const useUpdateBookingStatus = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: string; status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show' }) => {
+    mutationFn: async ({ bookingId, status }: { bookingId: string; status: BookingStatus }) => {
       const { data, error } = await supabase
         .from('bookings')
         .update({ status, updated_at: new Date().toISOString() })
