@@ -1,42 +1,55 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext';
 
-type Booking = Database['public']['Tables']['bookings']['Row'];
-type BookingInsert = Database['public']['Tables']['bookings']['Insert'];
-
-export const useBookings = (userId?: string) => {
+export const useBookings = () => {
+  const { user } = useAuth();
+  
   return useQuery({
-    queryKey: ['bookings', userId],
+    queryKey: ['bookings', user?.id],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!user?.id) throw new Error('No user ID');
       
       const { data, error } = await supabase
         .from('bookings')
         .select(`
           *,
-          service:services(name, duration_minutes),
-          provider:service_providers(business_name, business_address)
+          service:services!bookings_service_id_fkey(*),
+          provider:service_providers!bookings_provider_id_fkey(*)
         `)
-        .eq('client_id', userId)
-        .order('appointment_date', { ascending: true });
+        .eq('client_id', user.id)
+        .order('appointment_date', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: !!userId,
+    enabled: !!user?.id,
   });
 };
 
 export const useCreateBooking = () => {
   const queryClient = useQueryClient();
-  
+  const { user } = useAuth();
+
   return useMutation({
-    mutationFn: async (booking: BookingInsert) => {
+    mutationFn: async (bookingData: {
+      service_id: string;
+      provider_id: string;
+      appointment_date: string;
+      appointment_time: string;
+      duration_minutes: number;
+      total_price: number;
+      notes?: string;
+    }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       const { data, error } = await supabase
         .from('bookings')
-        .insert(booking)
+        .insert({
+          ...bookingData,
+          client_id: user.id,
+        })
         .select()
         .single();
 
@@ -51,9 +64,9 @@ export const useCreateBooking = () => {
 
 export const useUpdateBooking = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Booking> }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
       const { data, error } = await supabase
         .from('bookings')
         .update(updates)

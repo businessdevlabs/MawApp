@@ -1,21 +1,22 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Database } from '@/integrations/supabase/types';
-
-type BookingStatus = Database['public']['Enums']['booking_status'];
 
 export const useProviderProfile = () => {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['provider-profile', user?.id],
+    queryKey: ['providerProfile', user?.id],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!user?.id) throw new Error('No user ID');
       
       const { data, error } = await supabase
         .from('service_providers')
-        .select('*')
+        .select(`
+          *,
+          user:profiles!service_providers_user_id_fkey(*)
+        `)
         .eq('user_id', user.id)
         .single();
 
@@ -27,85 +28,74 @@ export const useProviderProfile = () => {
 };
 
 export const useProviderBookings = () => {
-  const { data: provider } = useProviderProfile();
+  const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['provider-bookings', provider?.id],
+    queryKey: ['providerBookings', user?.id],
     queryFn: async () => {
-      if (!provider?.id) return [];
+      if (!user?.id) throw new Error('No user ID');
       
+      // First get the provider record
+      const { data: provider, error: providerError } = await supabase
+        .from('service_providers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (providerError) throw providerError;
+      if (!provider) return [];
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
           *,
-          service:services(name, duration_minutes),
-          client:profiles!client_id(full_name, phone, email)
+          client:profiles!bookings_client_id_fkey(*),
+          service:services!bookings_service_id_fkey(*)
         `)
         .eq('provider_id', provider.id)
-        .order('appointment_date', { ascending: true });
+        .order('appointment_date', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: !!provider?.id,
+    enabled: !!user?.id,
   });
 };
 
-// Simplified earnings hook - will return empty array until new tables are in types
-export const useProviderEarnings = () => {
-  const { data: provider } = useProviderProfile();
-  
+export const useAllProviders = () => {
   return useQuery({
-    queryKey: ['provider-earnings', provider?.id],
+    queryKey: ['allProviders'],
     queryFn: async () => {
-      // Return empty array for now since provider_earnings table isn't in types yet
-      return [];
-    },
-    enabled: !!provider?.id,
-  });
-};
-
-export const useUpdateProviderProfile = () => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (updates: any) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
       const { data, error } = await supabase
         .from('service_providers')
-        .update(updates)
-        .eq('user_id', user.id)
-        .select()
-        .single();
+        .select(`
+          *,
+          user:profiles!service_providers_user_id_fkey(*)
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['provider-profile'] });
+      return data || [];
     },
   });
 };
 
-export const useUpdateBookingStatus = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: string; status: BookingStatus }) => {
+export const useAllBookings = () => {
+  return useQuery({
+    queryKey: ['allBookings'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', bookingId)
-        .select()
-        .single();
+        .select(`
+          *,
+          client:profiles!bookings_client_id_fkey(*),
+          service:services!bookings_service_id_fkey(*),
+          provider:service_providers!bookings_provider_id_fkey(*)
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['provider-bookings'] });
+      return data || [];
     },
   });
 };
