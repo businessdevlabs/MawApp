@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useProviderProfile, useProviderBookings, useProviderServices } from '@/hooks/useProvider';
 import { useProviderSchedule } from '@/hooks/useProviderSchedule';
@@ -23,7 +24,7 @@ const ProviderDashboard = () => {
 
   const hasServices = services.length > 0;
   const hasSchedule = schedules.some(s => s.is_available);
-  const hasProfile = provider && provider.business_name && provider.business_description;
+  const hasProfile = !!(provider && provider.business_name && provider.business_description);
 
   const isLoading = providerLoading || bookingsLoading || servicesLoading || schedulesLoading;
 
