@@ -20,7 +20,8 @@ const Login = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      const redirectPath = user.role === 'provider' ? '/provider/dashboard' : '/dashboard';
+      navigate(redirectPath);
     }
   }, [user, navigate]);
 
@@ -34,7 +35,8 @@ const Login = () => {
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
-      navigate('/dashboard');
+      
+      // Don't navigate here - let the useEffect handle it after user state is set
     } catch (error: any) {
       toast({
         title: "Login failed",

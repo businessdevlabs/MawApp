@@ -19,9 +19,17 @@ const Register = () => {
     role: 'client'
   });
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      const redirectPath = user.role === 'provider' ? '/provider/dashboard' : '/dashboard';
+      navigate(redirectPath);
+    }
+  }, [user, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -60,7 +68,6 @@ const Register = () => {
         role: formData.role
       });
 
-      console.log('email2', formData.email, formData.password, formData.name, formData.role)
       await register(formData.email, formData.password, formData.name, formData.role);
       
       toast({
@@ -68,7 +75,7 @@ const Register = () => {
         description: "Welcome to BookEase. Your account has been created successfully.",
       });
       
-      navigate(formData.role === 'provider' ? '/provider/dashboard' : '/dashboard');
+      // Don't navigate here - let the useEffect handle it after user state is set
     } catch (error: any) {
       console.error('Registration error details:', error);
       

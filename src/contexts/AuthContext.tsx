@@ -12,12 +12,12 @@ interface AuthUser extends Profile {
 
 interface AuthContextType {
   user: AuthUser | null;
-  profile: AuthUser | null;  // Added profile property
+  profile: AuthUser | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
-  signOut: () => Promise<void>;  // Added signOut alias
+  signOut: () => Promise<void>;
   loading: boolean;
 }
 
