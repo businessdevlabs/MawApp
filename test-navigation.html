@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Navigation Tabs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .nav-item { display: inline-block; margin-right: 20px; padding: 8px 16px; background: #f0f0f0; border-radius: 4px; }
+        .new { background: #e8f5e8; color: #2d7a2d; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Navigation Tabs Test</h1>
+    
+    <div class="test-case">
+        <h3>🔒 Client User Navigation</h3>
+        <div class="nav-item">Services</div>
+        <div class="nav-item">My Bookings</div>
+        <em>Dashboard tab not shown</em>
+    </div>
+    
+    <div class="test-case">
+        <h3>🏪 Provider User Navigation</h3>
+        <div class="nav-item">Services</div>
+        <div class="nav-item">My Bookings</div>
+        <div class="nav-item new">Dashboard (NEW)</div>
+        <em>→ Navigates to /provider/dashboard</em>
+    </div>
+    
+    <div class="test-case">
+        <h3>👤 Unauthenticated User Navigation</h3>
+        <div class="nav-item">Services</div>
+        <em>My Bookings and Dashboard tabs not shown</em>
+    </div>
+
+    <h2>Implementation Details:</h2>
+    <ul>
+        <li>✅ Added conditional Dashboard link for providers only</li>
+        <li>✅ Dashboard appears after "Services" and "My Bookings"</li>
+        <li>✅ Uses same styling as existing navigation links</li>
+        <li>✅ Desktop navigation (md:flex) updated</li>
+        <li>✅ Mobile users can access via dropdown menu (already existed)</li>
+        <li>✅ Navigates to <code>/provider/dashboard</code></li>
+    </ul>
+
+    <h2>Test URLs:</h2>
+    <ul>
+        <li><a href="http://localhost:8080/services" target="_blank">Services Page</a></li>
+        <li><a href="http://localhost:8080/bookings" target="_blank">My Bookings Page</a></li>
+        <li><a href="http://localhost:8080/provider/dashboard" target="_blank">Provider Dashboard</a></li>
+    </ul>
+</body>
+</html>

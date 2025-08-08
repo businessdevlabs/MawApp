@@ -1,0 +1,98 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { BookingService, type CreateBookingData, type IBooking } from '@/integrations/mongodb';
+import { useAuth } from '@/contexts/AuthContext';
+
+export const useBookings = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['bookings', user?._id],
+    queryFn: async () => {
+      if (!user?._id) throw new Error('No user ID');
+      
+      const bookings = await BookingService.getBookingsByClient(user._id);
+      return bookings;
+    },
+    enabled: !!user?._id,
+  });
+};
+
+export const useCreateBooking = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (bookingData: {
+      serviceId: string;
+      providerId: string;
+      appointmentDate: string;
+      appointmentTime: string;
+      durationMinutes: number;
+      totalPrice: number;
+      notes?: string;
+    }) => {
+      if (!user?._id) throw new Error('User not authenticated');
+
+      const createData: CreateBookingData = {
+        clientId: user._id,
+        providerId: bookingData.providerId,
+        serviceId: bookingData.serviceId,
+        appointmentDate: bookingData.appointmentDate,
+        appointmentTime: bookingData.appointmentTime,
+        durationMinutes: bookingData.durationMinutes,
+        totalPrice: bookingData.totalPrice,
+        notes: bookingData.notes,
+      };
+
+      return await BookingService.createBooking(createData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};
+
+export const useUpdateBooking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      return await BookingService.updateBooking(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+};
+
+export const useUpdateBookingStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      status 
+    }: { 
+      id: string; 
+      status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show' 
+    }) => {
+      return await BookingService.updateBookingStatus(id, status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['providerBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['allBookings'] });
+    },
+  });
+};
+
+export const useAvailableTimeSlots = (providerId: string, date: string) => {
+  return useQuery({
+    queryKey: ['availableTimeSlots', providerId, date],
+    queryFn: async () => {
+      if (!providerId || !date) return [];
+      return await BookingService.getAvailableTimeSlots(providerId, date);
+    },
+    enabled: !!providerId && !!date,
+  });
+};

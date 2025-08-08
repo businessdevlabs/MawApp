@@ -18,9 +18,11 @@ import ProviderProfile from "./pages/provider/ProviderProfile";
 import ProviderBookings from "./pages/provider/ProviderBookings";
 import ProviderSchedule from "./pages/provider/ProviderSchedule";
 import ProviderServices from "./pages/provider/ProviderServices";
+import ProviderPayments from "./pages/provider/ProviderPayments";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,11 +36,32 @@ const App = () => (
         <AuthProvider>
           <Layout>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute redirectProvidersTo="/provider/dashboard">
+                    <Home />
+                  </ProtectedRoute>
+                } 
+              />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/services" element={<Services />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute redirectProvidersTo="/provider/dashboard">
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/services" 
+                element={
+                  <ProtectedRoute redirectProvidersTo="/provider/dashboard">
+                    <Services />
+                  </ProtectedRoute>
+                } 
+              />
               <Route path="/service/:serviceId" element={<ServiceDetail />} />
               <Route path="/bookings" element={<MyBookings />} />
               
@@ -48,6 +71,7 @@ const App = () => (
               <Route path="/provider/bookings" element={<ProviderBookings />} />
               <Route path="/provider/schedule" element={<ProviderSchedule />} />
               <Route path="/provider/services" element={<ProviderServices />} />
+              <Route path="/provider/payments" element={<ProviderPayments />} />
               
               {/* Admin Routes */}
               <Route path="/admin/dashboard" element={<AdminDashboard />} />

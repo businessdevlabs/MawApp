@@ -1,0 +1,123 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ReviewService, type CreateReviewData } from '@/integrations/mongodb';
+import { useAuth } from '@/contexts/AuthContext';
+
+export const useProviderReviews = (providerId: string) => {
+  return useQuery({
+    queryKey: ['providerReviews', providerId],
+    queryFn: async () => {
+      if (!providerId) return [];
+      
+      return await ReviewService.getReviewsByProvider(providerId);
+    },
+    enabled: !!providerId,
+  });
+};
+
+export const useClientReviews = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['clientReviews', user?._id],
+    queryFn: async () => {
+      if (!user?._id) return [];
+      
+      return await ReviewService.getReviewsByClient(user._id);
+    },
+    enabled: !!user?._id,
+  });
+};
+
+export const useBookingReview = (bookingId: string) => {
+  return useQuery({
+    queryKey: ['bookingReview', bookingId],
+    queryFn: async () => {
+      if (!bookingId) return null;
+      
+      return await ReviewService.getReviewByBooking(bookingId);
+    },
+    enabled: !!bookingId,
+  });
+};
+
+export const useProviderRatingStats = (providerId: string) => {
+  return useQuery({
+    queryKey: ['providerRatingStats', providerId],
+    queryFn: async () => {
+      if (!providerId) return null;
+      
+      return await ReviewService.getProviderRatingStats(providerId);
+    },
+    enabled: !!providerId,
+  });
+};
+
+export const useCreateReview = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (reviewData: {
+      providerId: string;
+      bookingId: string;
+      rating: number;
+      comment?: string;
+    }) => {
+      if (!user?._id) throw new Error('User not authenticated');
+
+      const createData: CreateReviewData = {
+        clientId: user._id,
+        providerId: reviewData.providerId,
+        bookingId: reviewData.bookingId,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+      };
+
+      return await ReviewService.createReview(createData);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['providerReviews', variables.providerId] });
+      queryClient.invalidateQueries({ queryKey: ['clientReviews'] });
+      queryClient.invalidateQueries({ queryKey: ['bookingReview', variables.bookingId] });
+      queryClient.invalidateQueries({ queryKey: ['providerRatingStats', variables.providerId] });
+    },
+  });
+};
+
+export const useUpdateReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      rating, 
+      comment 
+    }: { 
+      id: string; 
+      rating?: number; 
+      comment?: string; 
+    }) => {
+      return await ReviewService.updateReview(id, { rating, comment });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerReviews'] });
+      queryClient.invalidateQueries({ queryKey: ['clientReviews'] });
+      queryClient.invalidateQueries({ queryKey: ['providerRatingStats'] });
+    },
+  });
+};
+
+export const useDeleteReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (reviewId: string) => {
+      return await ReviewService.deleteReview(reviewId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerReviews'] });
+      queryClient.invalidateQueries({ queryKey: ['clientReviews'] });
+      queryClient.invalidateQueries({ queryKey: ['providerRatingStats'] });
+    },
+  });
+};

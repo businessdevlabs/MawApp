@@ -1,0 +1,87 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { BookingService } from '@/integrations/mongodb';
+
+export const useProviderSchedule = (providerId?: string) => {
+  return useQuery({
+    queryKey: ['provider-schedule', providerId],
+    queryFn: async () => {
+      if (!providerId) return [];
+      
+      // Get bookings for the next 30 days to show schedule
+      const startDate = new Date().toISOString().split('T')[0];
+      const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      return await BookingService.getBookingsInDateRange(providerId, startDate, endDate);
+    },
+    enabled: !!providerId,
+  });
+};
+
+export const useAvailableSlots = (providerId: string, date: string) => {
+  return useQuery({
+    queryKey: ['available-slots', providerId, date],
+    queryFn: async () => {
+      if (!providerId || !date) return [];
+      
+      return await BookingService.getAvailableTimeSlots(providerId, date);
+    },
+    enabled: !!providerId && !!date,
+  });
+};
+
+export const useProviderBlackouts = (providerId?: string) => {
+  return useQuery({
+    queryKey: ['provider-blackouts', providerId],
+    queryFn: async () => {
+      // For now, return empty array since we don't have a blackouts system yet
+      // This could be implemented later as a separate collection/model
+      return [];
+    },
+    enabled: !!providerId,
+  });
+};
+
+export const useCreateSchedule = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (schedule: any) => {
+      // This would be implemented with a proper schedule management system
+      console.log('Schedule creation simulated:', schedule);
+      return schedule;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['provider-schedule'] });
+    },
+  });
+};
+
+export const useUpdateSchedule = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      // This would be implemented with a proper schedule management system
+      console.log('Schedule update simulated:', { id, updates });
+      return { id, ...updates };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['provider-schedule'] });
+    },
+  });
+};
+
+export const useCreateBlackout = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (blackout: any) => {
+      // This would be implemented with a proper blackout management system
+      console.log('Blackout creation simulated:', blackout);
+      return blackout;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['provider-blackouts'] });
+    },
+  });
+};

@@ -14,18 +14,18 @@ import { Calendar, Clock, MapPin, User, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Service {
-  id: string;
+  _id: string;
   name: string;
   description: string;
-  duration_minutes: number;
+  duration: number;
   price: number;
-  provider: {
-    id: string;
-    business_name: string;
-    business_address: string;
-    business_phone: string;
-    rating: number;
-    total_reviews: number;
+  providerId: {
+    _id: string;
+    businessName: string;
+    businessAddress?: string;
+    businessPhone?: string;
+    averageRating?: number;
+    totalReviews?: number;
   };
 }
 
@@ -58,11 +58,11 @@ const BookingForm = ({ service }: BookingFormProps) => {
 
     try {
       await createBooking.mutateAsync({
-        provider_id: service.provider.id,
-        service_id: service.id,
+        provider_id: service.providerId._id,
+        service_id: service._id,
         appointment_date: format(selectedDate, 'yyyy-MM-dd'),
         appointment_time: selectedTime,
-        duration_minutes: service.duration_minutes,
+        duration_minutes: service.duration,
         total_price: service.price,
         notes: notes || undefined,
       });
@@ -100,15 +100,15 @@ const BookingForm = ({ service }: BookingFormProps) => {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <User className="w-4 h-4 text-gray-500" />
-                <span>{service.provider.business_name}</span>
+                <span>{service.providerId.businessName}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <MapPin className="w-4 h-4 text-gray-500" />
-                <span>{service.provider.business_address}</span>
+                <span>{service.providerId.businessAddress}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="w-4 h-4 text-gray-500" />
-                <span>{service.duration_minutes} minutes</span>
+                <span>{service.duration} minutes</span>
               </div>
             </div>
             <div className="space-y-2">
@@ -116,7 +116,7 @@ const BookingForm = ({ service }: BookingFormProps) => {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Rating:</span>
                 <Badge variant="outline">
-                  ⭐ {service.provider.rating} ({service.provider.total_reviews} reviews)
+                  ⭐ {service.providerId.averageRating || 'N/A'} ({service.providerId.totalReviews || 0} reviews)
                 </Badge>
               </div>
             </div>
@@ -135,7 +135,7 @@ const BookingForm = ({ service }: BookingFormProps) => {
             selectedTime={selectedTime}
             onDateSelect={setSelectedDate}
             onTimeSelect={setSelectedTime}
-            duration={service.duration_minutes}
+            duration={service.duration}
           />
         </CardContent>
       </Card>
@@ -169,7 +169,7 @@ const BookingForm = ({ service }: BookingFormProps) => {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gray-500" />
-                <span>{selectedTime} ({service.duration_minutes} minutes)</span>
+                <span>{selectedTime} ({service.duration} minutes)</span>
               </div>
             </div>
           )}

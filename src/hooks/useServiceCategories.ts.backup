@@ -1,0 +1,58 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ServiceService } from '@/integrations/mongodb';
+
+export const useServiceCategories = () => {
+  return useQuery({
+    queryKey: ['serviceCategories'],
+    queryFn: async () => {
+      return await ServiceService.getAllCategories();
+    },
+  });
+};
+
+export const useServiceCategory = (categoryId: string) => {
+  return useQuery({
+    queryKey: ['serviceCategory', categoryId],
+    queryFn: async () => {
+      if (!categoryId) throw new Error('Category ID is required');
+      
+      return await ServiceService.getCategoryById(categoryId);
+    },
+    enabled: !!categoryId,
+  });
+};
+
+export const useCreateServiceCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (categoryData: {
+      name: string;
+      description?: string;
+      iconUrl?: string;
+    }) => {
+      return await ServiceService.createCategory(categoryData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['serviceCategories'] });
+    },
+  });
+};
+
+export const useUpdateServiceCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { 
+      id: string; 
+      name?: string;
+      description?: string;
+      iconUrl?: string;
+    }) => {
+      return await ServiceService.updateCategory(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['serviceCategories'] });
+    },
+  });
+};

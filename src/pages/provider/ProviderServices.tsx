@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useProviderProfile, useProviderServices, useCreateService, useUpdateService } from '@/hooks/useProvider';
+import { useProviderProfile, useProviderServices, useCreateService, useUpdateService, useDeleteService } from '@/hooks/useProvider';
 import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, DollarSign, Clock, Tag } from 'lucide-react';
+import { Plus, Edit, DollarSign, Clock, Tag, Trash2 } from 'lucide-react';
 
 const ProviderServices = () => {
   const { data: provider, isLoading: providerLoading } = useProviderProfile();
@@ -20,6 +20,7 @@ const ProviderServices = () => {
   const { data: categories = [] } = useServiceCategories();
   const createService = useCreateService();
   const updateService = useUpdateService();
+  const deleteService = useDeleteService();
   const { toast } = useToast();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -29,30 +30,85 @@ const ProviderServices = () => {
     name: '',
     description: '',
     price: '',
-    duration_minutes: '',
-    category_id: '',
+    duration: '',
+    category: '',
+    maxBookingsPerDay: '',
+    requirements: '',
+    tags: '',
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const resetForm = () => {
     setFormData({
       name: '',
       description: '',
       price: '',
-      duration_minutes: '',
-      category_id: '',
+      duration: '',
+      category: '',
+      maxBookingsPerDay: '',
+      requirements: '',
+      tags: '',
     });
+    setFormErrors({});
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+
+    // Name validation (min 2 characters)
+    if (!formData.name.trim()) {
+      errors.name = 'Service name is required';
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Service name must be at least 2 characters';
+    }
+
+    // Description validation (min 10 characters)
+    if (!formData.description.trim()) {
+      errors.description = 'Description is required';
+    } else if (formData.description.trim().length < 10) {
+      errors.description = 'Description must be at least 10 characters';
+    }
+
+    // Category validation (required)
+    if (!formData.category) {
+      errors.category = 'Category is required';
+    }
+
+    // Price validation (required, positive number)
+    if (!formData.price) {
+      errors.price = 'Price is required';
+    } else if (parseFloat(formData.price) < 0) {
+      errors.price = 'Price must be a positive number';
+    }
+
+    // Duration validation (required, positive integer)
+    if (!formData.duration) {
+      errors.duration = 'Duration is required';
+    } else if (parseInt(formData.duration) < 1) {
+      errors.duration = 'Duration must be at least 1 minute';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!validateForm()) {
+      return;
+    }
+    
     try {
       await createService.mutateAsync({
         name: formData.name,
-        description: formData.description || undefined,
+        description: formData.description,
         price: parseFloat(formData.price),
-        duration_minutes: parseInt(formData.duration_minutes),
-        category_id: formData.category_id || undefined,
+        duration: parseInt(formData.duration),
+        category: formData.category,
+        maxBookingsPerDay: formData.maxBookingsPerDay ? parseInt(formData.maxBookingsPerDay) : 10,
+        requirements: formData.requirements ? formData.requirements.split(',').map(r => r.trim()) : [],
+        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
       });
 
       toast({
@@ -75,14 +131,21 @@ const ProviderServices = () => {
     e.preventDefault();
     if (!editingService) return;
     
+    if (!validateForm()) {
+      return;
+    }
+    
     try {
       await updateService.mutateAsync({
-        id: editingService.id,
+        id: editingService._id,
         name: formData.name,
-        description: formData.description || undefined,
+        description: formData.description,
         price: parseFloat(formData.price),
-        duration_minutes: parseInt(formData.duration_minutes),
-        category_id: formData.category_id || undefined,
+        duration: parseInt(formData.duration),
+        category: formData.category,
+        maxBookingsPerDay: formData.maxBookingsPerDay ? parseInt(formData.maxBookingsPerDay) : 10,
+        requirements: formData.requirements ? formData.requirements.split(',').map(r => r.trim()) : [],
+        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
       });
 
       toast({
@@ -108,10 +171,31 @@ const ProviderServices = () => {
       name: service.name,
       description: service.description || '',
       price: service.price.toString(),
-      duration_minutes: service.duration_minutes.toString(),
-      category_id: service.category_id || '',
+      duration: service.duration.toString(),
+      category: service.category._id || '',
+      maxBookingsPerDay: service.maxBookingsPerDay?.toString() || '10',
+      requirements: service.requirements?.join(', ') || '',
+      tags: service.tags?.join(', ') || '',
     });
     setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteService = async (serviceId: string) => {
+    if (!confirm('Are you sure you want to delete this service?')) return;
+    
+    try {
+      await deleteService.mutateAsync(serviceId);
+      toast({
+        title: "Service deleted",
+        description: "Your service has been deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete service. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (providerLoading || servicesLoading) {
@@ -163,60 +247,112 @@ const ProviderServices = () => {
                 </DialogHeader>
                 <form onSubmit={handleCreateService} className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Service Name</Label>
+                    <Label htmlFor="name">Service Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
+                      className={formErrors.name ? 'border-red-500' : ''}
                     />
+                    {formErrors.name && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
                     <Textarea
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={3}
+                      className={formErrors.description ? 'border-red-500' : ''}
+                      placeholder="Enter at least 10 characters"
                     />
+                    {formErrors.description && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.description}</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="price">Price ($)</Label>
+                      <Label htmlFor="price">Price ($) <span className="text-red-500">*</span></Label>
                       <Input
                         id="price"
                         type="number"
                         step="0.01"
+                        min="0"
                         value={formData.price}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                         required
+                        className={formErrors.price ? 'border-red-500' : ''}
                       />
+                      {formErrors.price && (
+                        <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="duration">Duration (minutes)</Label>
+                      <Label htmlFor="duration">Duration (minutes) <span className="text-red-500">*</span></Label>
                       <Input
                         id="duration"
                         type="number"
-                        value={formData.duration_minutes}
-                        onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
+                        min="1"
+                        value={formData.duration}
+                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                         required
+                        className={formErrors.duration ? 'border-red-500' : ''}
                       />
+                      {formErrors.duration && (
+                        <p className="text-sm text-red-500 mt-1">{formErrors.duration}</p>
+                      )}
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                      <SelectTrigger>
+                    <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
+                    <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                      <SelectTrigger className={formErrors.category ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
+                          <SelectItem key={category._id} value={category._id}>
                             {category.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {formErrors.category && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.category}</p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="maxBookingsPerDay">Max Bookings/Day</Label>
+                      <Input
+                        id="maxBookingsPerDay"
+                        type="number"
+                        value={formData.maxBookingsPerDay}
+                        onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
+                        placeholder="10"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="requirements">Requirements (comma separated)</Label>
+                    <Input
+                      id="requirements"
+                      value={formData.requirements}
+                      onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
+                      placeholder="Valid ID, Prior appointment"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tags">Tags (comma separated)</Label>
+                    <Input
+                      id="tags"
+                      value={formData.tags}
+                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                      placeholder="professional, consultation"
+                    />
                   </div>
                   <div className="flex justify-end space-x-2">
                     <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -245,13 +381,18 @@ const ProviderServices = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {services.map((service) => (
-                <Card key={service.id} className="hover:shadow-lg transition-shadow">
+                <Card key={service._id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">{service.name}</CardTitle>
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(service)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div className="flex space-x-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(service)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteService(service._id)}>
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -266,7 +407,7 @@ const ProviderServices = () => {
                         </div>
                         <div className="flex items-center text-sm text-gray-500">
                           <Clock className="w-4 h-4 mr-1" />
-                          <span>{service.duration_minutes} min</span>
+                          <span>{service.duration} min</span>
                         </div>
                       </div>
                       {service.category && (
@@ -278,8 +419,8 @@ const ProviderServices = () => {
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <Badge variant={service.is_active ? "default" : "secondary"}>
-                          {service.is_active ? "Active" : "Inactive"}
+                        <Badge variant={service.isActive !== false ? "default" : "secondary"}>
+                          {service.isActive !== false ? "Active" : "Inactive"}
                         </Badge>
                       </div>
                     </div>
@@ -297,60 +438,112 @@ const ProviderServices = () => {
               </DialogHeader>
               <form onSubmit={handleEditService} className="space-y-4">
                 <div>
-                  <Label htmlFor="edit-name">Service Name</Label>
+                  <Label htmlFor="edit-name">Service Name <span className="text-red-500">*</span></Label>
                   <Input
                     id="edit-name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
+                    className={formErrors.name ? 'border-red-500' : ''}
                   />
+                  {formErrors.name && (
+                    <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
+                  )}
                 </div>
                 <div>
-                  <Label htmlFor="edit-description">Description</Label>
+                  <Label htmlFor="edit-description">Description <span className="text-red-500">*</span></Label>
                   <Textarea
                     id="edit-description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
+                    className={formErrors.description ? 'border-red-500' : ''}
+                    placeholder="Enter at least 10 characters"
                   />
+                  {formErrors.description && (
+                    <p className="text-sm text-red-500 mt-1">{formErrors.description}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="edit-price">Price ($)</Label>
+                    <Label htmlFor="edit-price">Price ($) <span className="text-red-500">*</span></Label>
                     <Input
                       id="edit-price"
                       type="number"
                       step="0.01"
+                      min="0"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       required
+                      className={formErrors.price ? 'border-red-500' : ''}
                     />
+                    {formErrors.price && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="edit-duration">Duration (minutes)</Label>
+                    <Label htmlFor="edit-duration">Duration (minutes) <span className="text-red-500">*</span></Label>
                     <Input
                       id="edit-duration"
                       type="number"
-                      value={formData.duration_minutes}
-                      onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
+                      min="1"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                       required
+                      className={formErrors.duration ? 'border-red-500' : ''}
                     />
+                    {formErrors.duration && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.duration}</p>
+                    )}
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                    <SelectTrigger>
+                  <Label htmlFor="edit-category">Category <span className="text-red-500">*</span></Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                    <SelectTrigger className={formErrors.category ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem key={category._id} value={category._id}>
                           {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {formErrors.category && (
+                    <p className="text-sm text-red-500 mt-1">{formErrors.category}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-maxBookingsPerDay">Max Bookings/Day</Label>
+                    <Input
+                      id="edit-maxBookingsPerDay"
+                      type="number"
+                      value={formData.maxBookingsPerDay}
+                      onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
+                      placeholder="10"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-requirements">Requirements (comma separated)</Label>
+                  <Input
+                    id="edit-requirements"
+                    value={formData.requirements}
+                    onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
+                    placeholder="Valid ID, Prior appointment"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-tags">Tags (comma separated)</Label>
+                  <Input
+                    id="edit-tags"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="professional, consultation"
+                  />
                 </div>
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>

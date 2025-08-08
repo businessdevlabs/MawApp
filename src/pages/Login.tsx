@@ -20,8 +20,16 @@ const Login = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (user) {
-      const redirectPath = user.role === 'provider' ? '/provider/dashboard' : '/dashboard';
-      navigate(redirectPath);
+      // Check for intended redirect destination
+      const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
+      if (redirectAfterLogin) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectAfterLogin);
+      } else {
+        // Default redirect based on user role
+        const redirectPath = user.role === 'provider' ? '/provider/dashboard' : '/dashboard';
+        navigate(redirectPath);
+      }
     }
   }, [user, navigate]);
 

@@ -1,7 +1,9 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProviderProfile } from '@/hooks/useProvider';
 import { useProviderSchedule, useCreateSchedule, useUpdateSchedule } from '@/hooks/useProviderSchedule';
+import { useProviderServices } from '@/hooks/useProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,19 +24,21 @@ const DAYS_OF_WEEK = [
 ];
 
 const ProviderSchedule = () => {
+  const navigate = useNavigate();
   const { data: provider, isLoading: providerLoading } = useProviderProfile();
   const { data: schedules = [], isLoading: schedulesLoading } = useProviderSchedule(provider?.id);
+  const { data: services = [], isLoading: servicesLoading } = useProviderServices();
   const createSchedule = useCreateSchedule();
   const updateSchedule = useUpdateSchedule();
   const { toast } = useToast();
 
   const [scheduleData, setScheduleData] = useState(() => {
-    const initialData: Record<number, { is_available: boolean; start_time: string; end_time: string }> = {};
+    const initialData: Record<number, { isAvailable: boolean; startTime: string; endTime: string }> = {};
     DAYS_OF_WEEK.forEach(day => {
       initialData[day.value] = {
-        is_available: false,
-        start_time: '09:00',
-        end_time: '17:00'
+        isAvailable: false,
+        startTime: '09:00',
+        endTime: '17:00'
       };
     });
     return initialData;
@@ -44,10 +48,10 @@ const ProviderSchedule = () => {
     if (schedules.length > 0) {
       const updatedData = { ...scheduleData };
       schedules.forEach(schedule => {
-        updatedData[schedule.day_of_week] = {
-          is_available: schedule.is_available,
-          start_time: schedule.start_time,
-          end_time: schedule.end_time
+        updatedData[schedule.dayOfWeek] = {
+          isAvailable: schedule.isAvailable,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime
         };
       });
       setScheduleData(updatedData);
@@ -65,38 +69,45 @@ const ProviderSchedule = () => {
   };
 
   const handleSaveSchedule = async () => {
-    if (!provider?.id) return;
-
     try {
-      for (const dayOfWeek of DAYS_OF_WEEK) {
-        const dayData = scheduleData[dayOfWeek.value];
-        const existingSchedule = schedules.find(s => s.day_of_week === dayOfWeek.value);
+      const schedulesToSave = DAYS_OF_WEEK.map(day => {
+        const dayData = scheduleData[day.value];
+        return {
+          dayOfWeek: day.value,
+          isAvailable: dayData.isAvailable,
+          startTime: dayData.startTime,
+          endTime: dayData.endTime
+        };
+      });
 
-        if (existingSchedule) {
-          await updateSchedule.mutateAsync({
-            id: existingSchedule.id,
-            updates: {
-              is_available: dayData.is_available,
-              start_time: dayData.start_time,
-              end_time: dayData.end_time,
-              updated_at: new Date().toISOString()
-            }
-          });
-        } else {
-          await createSchedule.mutateAsync({
-            provider_id: provider.id,
-            day_of_week: dayOfWeek.value,
-            is_available: dayData.is_available,
-            start_time: dayData.start_time,
-            end_time: dayData.end_time
-          });
-        }
-      }
+      await updateSchedule.mutateAsync(schedulesToSave);
 
       toast({
         title: "Schedule saved",
         description: "Your availability schedule has been updated.",
       });
+
+      // Check if provider is still in setup mode and navigate to step 3
+      const hasServices = services.length > 0;
+      // Check if schedule is being set (either existing schedules or the ones being saved now)
+      const hasSchedule = schedules.some(s => s.isAvailable) || schedulesToSave.some(s => s.isAvailable);
+      // For profile, be more lenient - just need business name OR email
+      const hasProfile = !!(provider && (
+        provider.businessName || 
+        provider.businessDescription || 
+        provider.businessAddress || 
+        provider.businessPhone || 
+        provider.businessEmail
+      ));
+
+      // If profile is complete and schedule is now set but services are not set, navigate to services
+      if (hasProfile && hasSchedule && !hasServices) {
+        console.log('Provider setup: Navigating from schedule (step 2) to services (step 3)');
+        setTimeout(() => {
+          navigate('/provider/services');
+        }, 1500); // Small delay to show success message
+      }
+
     } catch (error) {
       toast({
         title: "Error",
@@ -161,25 +172,25 @@ const ProviderSchedule = () => {
                 <div key={day.value} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-4">
                     <Switch
-                      checked={scheduleData[day.value]?.is_available || false}
-                      onCheckedChange={(checked) => handleScheduleChange(day.value, 'is_available', checked)}
+                      checked={scheduleData[day.value]?.isAvailable || false}
+                      onCheckedChange={(checked) => handleScheduleChange(day.value, 'isAvailable', checked)}
                     />
                     <Label className="font-medium w-20">{day.label}</Label>
                   </div>
                   
-                  {scheduleData[day.value]?.is_available && (
+                  {scheduleData[day.value]?.isAvailable && (
                     <div className="flex items-center space-x-2">
                       <Input
                         type="time"
-                        value={scheduleData[day.value]?.start_time || '09:00'}
-                        onChange={(e) => handleScheduleChange(day.value, 'start_time', e.target.value)}
+                        value={scheduleData[day.value]?.startTime || '09:00'}
+                        onChange={(e) => handleScheduleChange(day.value, 'startTime', e.target.value)}
                         className="w-32"
                       />
                       <span className="text-gray-500">to</span>
                       <Input
                         type="time"
-                        value={scheduleData[day.value]?.end_time || '17:00'}
-                        onChange={(e) => handleScheduleChange(day.value, 'end_time', e.target.value)}
+                        value={scheduleData[day.value]?.endTime || '17:00'}
+                        onChange={(e) => handleScheduleChange(day.value, 'endTime', e.target.value)}
                         className="w-32"
                       />
                     </div>

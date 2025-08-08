@@ -1,18 +1,45 @@
-
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '../services/api';
 
 export const useServiceCategories = () => {
   return useQuery({
     queryKey: ['serviceCategories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_categories')
-        .select('*')
-        .order('name', { ascending: true });
+    queryFn: () => apiService.getServiceCategories(),
+  });
+};
 
-      if (error) throw error;
-      return data || [];
+export const useServiceCategory = (categoryId: string) => {
+  return useQuery({
+    queryKey: ['serviceCategory', categoryId],
+    queryFn: () => apiService.getServiceCategory(categoryId),
+    enabled: !!categoryId,
+  });
+};
+
+export const useCreateServiceCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (categoryData: any) => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { id: 'mock_category_id', ...categoryData };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['serviceCategories'] });
+    },
+  });
+};
+
+export const useUpdateServiceCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { id, ...updates };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['serviceCategories'] });
     },
   });
 };

@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
-import { useProviderBookings, useUpdateBookingStatus } from '@/hooks/useProvider';
+import { useSearchParams } from 'react-router-dom';
+import { useProviderBookings } from '@/hooks/useProvider';
+import { useUpdateBookingStatus } from '@/hooks/useProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,14 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { Calendar, Clock, User, Phone, Mail, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { Database } from '@/integrations/supabase/types';
-
-type BookingStatus = Database['public']['Enums']['booking_status'];
+type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
 const ProviderBookings = () => {
+  const [searchParams] = useSearchParams();
   const { data: bookings = [], isLoading } = useProviderBookings();
   const updateBookingStatus = useUpdateBookingStatus();
   const { toast } = useToast();
+  
+  // Get the tab from URL params, default to 'all'
+  const defaultTab = searchParams.get('tab') || 'all';
 
   const handleStatusUpdate = async (bookingId: string, status: BookingStatus) => {
     try {
@@ -37,35 +41,47 @@ const ProviderBookings = () => {
   const filterBookings = (filter: string) => {
     switch (filter) {
       case 'today':
-        return bookings.filter(booking => isToday(new Date(booking.appointment_date)));
+        return bookings.filter(booking => isToday(new Date(booking.appointmentDate)));
       case 'upcoming':
         return bookings.filter(booking => 
-          new Date(booking.appointment_date) > new Date() && !isToday(new Date(booking.appointment_date))
+          new Date(booking.appointmentDate) > new Date() && !isToday(new Date(booking.appointmentDate))
         );
       case 'past':
-        return bookings.filter(booking => isPast(new Date(booking.appointment_date)));
+        return bookings.filter(booking => isPast(new Date(booking.appointmentDate)));
+      case 'completed':
+        return bookings.filter(booking => booking.status === 'completed');
+      case 'cancelled':
+        return bookings.filter(booking => booking.status === 'cancelled' || booking.status === 'no_show');
       default:
         return bookings;
     }
   };
 
   const BookingCard = ({ booking }: { booking: any }) => (
-    <Card key={booking.id} className="mb-4">
+    <Card className="mb-4">
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <User className="w-4 h-4 text-gray-500" />
-              <h3 className="font-semibold">{booking.client?.full_name || 'Unknown Client'}</h3>
+              <h3 className="font-semibold">{booking.clientId?.fullName || 'Unknown Client'}</h3>
               <Badge 
                 variant={
                   booking.status === 'confirmed' ? 'default' :
                   booking.status === 'pending' ? 'secondary' :
                   booking.status === 'completed' ? 'default' :
-                  'destructive'
+                  booking.status === 'cancelled' ? 'destructive' :
+                  booking.status === 'no_show' ? 'destructive' :
+                  'outline'
+                }
+                className={
+                  booking.status === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                  booking.status === 'cancelled' || booking.status === 'no_show' ? 'bg-red-100 text-red-800 hover:bg-red-100' :
+                  ''
                 }
               >
-                {booking.status}
+                {booking.status === 'no_show' ? 'No Show' : 
+                 booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
               </Badge>
             </div>
             
@@ -73,28 +89,28 @@ const ProviderBookings = () => {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  {format(new Date(booking.appointment_date), 'EEEE, MMMM do, yyyy')}
-                  {isToday(new Date(booking.appointment_date)) && ' (Today)'}
-                  {isTomorrow(new Date(booking.appointment_date)) && ' (Tomorrow)'}
+                  {format(new Date(booking.appointmentDate), 'EEEE, MMMM do, yyyy')}
+                  {isToday(new Date(booking.appointmentDate)) && ' (Today)'}
+                  {isTomorrow(new Date(booking.appointmentDate)) && ' (Tomorrow)'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                <span>{booking.appointment_time} ({booking.duration_minutes} min)</span>
+                <span>{booking.startTime} ({booking.durationMinutes} min)</span>
               </div>
               <div className="font-medium">
-                Service: {booking.service?.name}
+                Service: {booking.serviceId?.name}
               </div>
-              {booking.client?.phone && (
+              {booking.clientId?.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4" />
-                  <span>{booking.client.phone}</span>
+                  <span>{booking.clientId.phone}</span>
                 </div>
               )}
-              {booking.client?.email && (
+              {booking.clientId?.email && (
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4" />
-                  <span>{booking.client.email}</span>
+                  <span>{booking.clientId.email}</span>
                 </div>
               )}
               {booking.notes && (
@@ -105,7 +121,7 @@ const ProviderBookings = () => {
             </div>
 
             <div className="text-lg font-semibold text-green-600">
-              ${booking.total_price}
+              ${booking.totalAmount}
             </div>
           </div>
 
@@ -114,7 +130,7 @@ const ProviderBookings = () => {
               <>
                 <Button
                   size="sm"
-                  onClick={() => handleStatusUpdate(booking.id, 'confirmed')}
+                  onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
                   disabled={updateBookingStatus.isPending}
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -123,7 +139,7 @@ const ProviderBookings = () => {
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => handleStatusUpdate(booking.id, 'cancelled')}
+                  onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
                   disabled={updateBookingStatus.isPending}
                 >
                   <XCircle className="w-4 h-4 mr-1" />
@@ -132,12 +148,12 @@ const ProviderBookings = () => {
               </>
             )}
             
-            {booking.status === 'confirmed' && !isPast(new Date(booking.appointment_date)) && (
+            {booking.status === 'confirmed' && !isPast(new Date(booking.appointmentDate)) && (
               <>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleStatusUpdate(booking.id, 'completed')}
+                  onClick={() => handleStatusUpdate(booking._id, 'completed')}
                   disabled={updateBookingStatus.isPending}
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -146,7 +162,7 @@ const ProviderBookings = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleStatusUpdate(booking.id, 'no_show')}
+                  onClick={() => handleStatusUpdate(booking._id, 'no_show')}
                   disabled={updateBookingStatus.isPending}
                 >
                   <AlertCircle className="w-4 h-4 mr-1" />
@@ -187,11 +203,13 @@ const ProviderBookings = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
 
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue={defaultTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
               <TabsTrigger value="today">Today ({filterBookings('today').length})</TabsTrigger>
               <TabsTrigger value="upcoming">Upcoming ({filterBookings('upcoming').length})</TabsTrigger>
+              <TabsTrigger value="completed">Completed ({filterBookings('completed').length})</TabsTrigger>
+              <TabsTrigger value="cancelled">Cancelled ({filterBookings('cancelled').length})</TabsTrigger>
               <TabsTrigger value="past">Past ({filterBookings('past').length})</TabsTrigger>
             </TabsList>
 
@@ -203,7 +221,7 @@ const ProviderBookings = () => {
                   </CardContent>
                 </Card>
               ) : (
-                bookings.map(booking => <BookingCard key={booking.id} booking={booking} />)
+                bookings.map(booking => <BookingCard key={booking._id} booking={booking} />)
               )}
             </TabsContent>
 
@@ -215,7 +233,7 @@ const ProviderBookings = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filterBookings('today').map(booking => <BookingCard key={booking.id} booking={booking} />)
+                filterBookings('today').map(booking => <BookingCard key={booking._id} booking={booking} />)
               )}
             </TabsContent>
 
@@ -227,7 +245,31 @@ const ProviderBookings = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filterBookings('upcoming').map(booking => <BookingCard key={booking.id} booking={booking} />)
+                filterBookings('upcoming').map(booking => <BookingCard key={booking._id} booking={booking} />)
+              )}
+            </TabsContent>
+
+            <TabsContent value="completed" className="space-y-4">
+              {filterBookings('completed').length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <p className="text-gray-500">No completed bookings</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filterBookings('completed').map(booking => <BookingCard key={booking._id} booking={booking} />)
+              )}
+            </TabsContent>
+
+            <TabsContent value="cancelled" className="space-y-4">
+              {filterBookings('cancelled').length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <p className="text-gray-500">No cancelled bookings</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filterBookings('cancelled').map(booking => <BookingCard key={booking._id} booking={booking} />)
               )}
             </TabsContent>
 
@@ -239,7 +281,7 @@ const ProviderBookings = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filterBookings('past').map(booking => <BookingCard key={booking.id} booking={booking} />)
+                filterBookings('past').map(booking => <BookingCard key={booking._id} booking={booking} />)
               )}
             </TabsContent>
           </Tabs>

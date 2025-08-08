@@ -31,7 +31,10 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link 
+            to={isProvider && !isAdminRoute ? "/provider/dashboard" : "/"} 
+            className="flex items-center space-x-2"
+          >
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">B</span>
             </div>
@@ -84,6 +87,11 @@ const Header = () => {
                     {user && (
                       <Link to="/bookings" className="text-gray-600 hover:text-gray-900 transition-colors">
                         My Bookings
+                      </Link>
+                    )}
+                    {user && isProvider && (
+                      <Link to="/provider/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
+                        Dashboard
                       </Link>
                     )}
                   </>
@@ -146,7 +154,7 @@ const Header = () => {
                     </>
                   )}
                   
-                  {(isProviderRoute || isAdminRoute) && (
+                  {(isAdminRoute) && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/services')}>
                         <Calendar className="mr-2 h-4 w-4" />

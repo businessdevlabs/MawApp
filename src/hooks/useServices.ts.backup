@@ -1,0 +1,27 @@
+import { useQuery } from '@tanstack/react-query';
+import { ServiceService } from '@/integrations/mongodb';
+
+export const useServices = (filters?: {
+  categoryId?: string;
+  search?: string;
+  providerId?: string;
+}) => {
+  return useQuery({
+    queryKey: ['services', filters],
+    queryFn: async () => {
+      return await ServiceService.getAllServices(filters);
+    },
+  });
+};
+
+export const useService = (serviceId: string) => {
+  return useQuery({
+    queryKey: ['service', serviceId],
+    queryFn: async () => {
+      if (!serviceId) throw new Error('Service ID is required');
+      
+      return await ServiceService.getServiceById(serviceId);
+    },
+    enabled: !!serviceId,
+  });
+};

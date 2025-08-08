@@ -3,77 +3,18 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useAdminStats, useAdminRecentBookings, useAdminProviders } from '@/hooks/useAdmin';
 import { Users, Store, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
 
 const AdminDashboard = () => {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['admin-stats'],
-    queryFn: async () => {
-      const [usersResult, providersResult, bookingsResult] = await Promise.all([
-        supabase.from('profiles').select('id, role').eq('role', 'client'),
-        supabase.from('service_providers').select('id, status'),
-        supabase.from('bookings').select('id, status, total_price, created_at')
-      ]);
+  const { data: stats, isLoading } = useAdminStats();
+  const { data: recentBookingsData } = useAdminRecentBookings(5);
+  const { data: pendingProvidersData } = useAdminProviders({ status: 'pending', limit: 10 });
 
-      const totalClients = usersResult.data?.length || 0;
-      const totalProviders = providersResult.data?.length || 0;
-      const pendingProviders = providersResult.data?.filter(p => p.status === 'pending').length || 0;
-      const approvedProviders = providersResult.data?.filter(p => p.status === 'approved').length || 0;
-      
-      const totalBookings = bookingsResult.data?.length || 0;
-      const totalRevenue = bookingsResult.data?.reduce((sum, booking) => 
-        sum + Number(booking.total_price), 0) || 0;
-
-      return {
-        totalClients,
-        totalProviders,
-        pendingProviders,
-        approvedProviders,
-        totalBookings,
-        totalRevenue
-      };
-    }
-  });
-
-  const { data: recentBookings = [] } = useQuery({
-    queryKey: ['admin-recent-bookings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          service:services!fk_bookings_service_id(name),
-          client:profiles!fk_bookings_client_id(full_name),
-          provider:service_providers!fk_bookings_provider_id(business_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  const { data: pendingProviders = [] } = useQuery({
-    queryKey: ['admin-pending-providers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_providers')
-        .select(`
-          *,
-          user:profiles!fk_service_providers_user_id(full_name, email)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
+  const recentBookings = recentBookingsData?.bookings || [];
+  const pendingProviders = pendingProvidersData?.providers || [];
 
   if (isLoading) {
     return (
@@ -193,14 +134,14 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="space-y-3">
                     {recentBookings.map(booking => (
-                      <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={booking._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="font-medium">{booking.client?.full_name || 'Unknown Client'}</p>
-                          <p className="text-sm text-gray-600">{booking.service?.name || 'Unknown Service'}</p>
-                          <p className="text-sm text-gray-500">{booking.provider?.business_name || 'Unknown Provider'}</p>
+                          <p className="font-medium">{booking.clientId?.fullName || 'Unknown Client'}</p>
+                          <p className="text-sm text-gray-600">{booking.serviceId?.name || 'Unknown Service'}</p>
+                          <p className="text-sm text-gray-500">{booking.providerId?.businessName || 'Unknown Provider'}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">${booking.total_price}</p>
+                          <p className="font-medium">${booking.totalAmount}</p>
                           <Badge variant={
                             booking.status === 'completed' ? 'default' :
                             booking.status === 'confirmed' ? 'secondary' :
@@ -230,11 +171,11 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="space-y-3">
                     {pendingProviders.map(provider => (
-                      <div key={provider.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={provider._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="font-medium">{provider.business_name}</p>
-                          <p className="text-sm text-gray-600">{provider.user?.full_name}</p>
-                          <p className="text-sm text-gray-500">{provider.user?.email}</p>
+                          <p className="font-medium">{provider.businessName}</p>
+                          <p className="text-sm text-gray-600">{provider.userId?.fullName}</p>
+                          <p className="text-sm text-gray-500">{provider.userId?.email}</p>
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" asChild>

@@ -1,63 +1,91 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 export const useBookings = () => {
-  const { user } = useAuth();
-  
   return useQuery({
-    queryKey: ['bookings', user?.id],
+    queryKey: ['bookings'],
     queryFn: async () => {
-      if (!user?.id) throw new Error('No user ID');
-      
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          service:services!fk_bookings_service_id(*),
-          provider:service_providers!fk_bookings_provider_id(*)
-        `)
-        .eq('client_id', user.id)
-        .order('appointment_date', { ascending: false });
+      try {
+        const response = await fetch('http://localhost:3001/api/bookings', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
 
-      if (error) throw error;
-      return data || [];
+        if (!response.ok) {
+          throw new Error('Failed to fetch bookings');
+        }
+
+        const data = await response.json();
+        
+        // Transform the API response to match the expected format
+        return data.bookings.map((booking: any) => ({
+          id: booking._id,
+          appointment_date: booking.appointmentDate.split('T')[0], // Convert to YYYY-MM-DD
+          appointment_time: booking.startTime,
+          duration_minutes: booking.durationMinutes,
+          total_price: booking.totalAmount,
+          status: booking.status,
+          notes: booking.notes,
+          service: {
+            name: booking.serviceId?.name,
+            description: booking.serviceId?.description,
+            price: booking.serviceId?.price
+          },
+          provider: {
+            business_name: booking.providerId?.businessName,
+            business_address: booking.providerId?.businessAddress,
+            business_phone: booking.providerId?.businessPhone
+          }
+        }));
+      } catch (error) {
+        console.error('Failed to fetch bookings:', error);
+        return [];
+      }
     },
-    enabled: !!user?.id,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 
 export const useCreateBooking = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (bookingData: {
-      service_id: string;
       provider_id: string;
+      service_id: string;
       appointment_date: string;
       appointment_time: string;
       duration_minutes: number;
       total_price: number;
       notes?: string;
     }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert({
-          ...bookingData,
-          client_id: user.id,
+      const response = await fetch('http://localhost:3001/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          serviceId: bookingData.service_id,
+          appointmentDate: bookingData.appointment_date,
+          startTime: bookingData.appointment_time,
+          notes: bookingData.notes
         })
-        .select()
-        .single();
+      });
 
-      if (error) throw error;
-      return data;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create booking');
+      }
+
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      queryClient.invalidateQueries({ queryKey: ['recentActivity'] });
     },
   });
 };
@@ -66,19 +94,69 @@ export const useUpdateBooking = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+    mutationFn: async ({ id, status, cancellationReason }: { 
+      id: string; 
+      status: string;
+      cancellationReason?: string;
+    }) => {
+      const response = await fetch(`http://localhost:3001/api/bookings/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          status,
+          cancellationReason
+        })
+      });
 
-      if (error) throw error;
-      return data;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update booking');
+      }
+
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      queryClient.invalidateQueries({ queryKey: ['recentActivity'] });
     },
+  });
+};
+
+export const useUpdateBookingStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      status 
+    }: { 
+      id: string; 
+      status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show' 
+    }) => {
+      // Simulate status update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { id, status };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['providerBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['allBookings'] });
+    },
+  });
+};
+
+export const useAvailableTimeSlots = (providerId: string, date: string) => {
+  return useQuery({
+    queryKey: ['availableTimeSlots', providerId, date],
+    queryFn: async () => {
+      // Return mock time slots
+      return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+    },
+    enabled: !!providerId && !!date,
   });
 };

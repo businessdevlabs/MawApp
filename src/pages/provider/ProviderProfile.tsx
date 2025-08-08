@@ -1,55 +1,124 @@
-
 import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useProviderProfile, useUpdateProviderProfile } from '@/hooks/useProvider';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, Mail, Star } from 'lucide-react';
+import { Phone, Mail, Star } from 'lucide-react';
+import ProviderMap from '@/components/maps/ProviderMap';
+
+// Form validation schema
+const profileSchema = z.object({
+  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
+  businessDescription: z.string().optional(),
+  businessAddress: z.string().optional(),
+  businessPhone: z.string().optional(),
+  businessEmail: z.string().email('Please enter a valid email address'),
+  website: z.string().url('Please enter a valid website URL (e.g., https://example.com)').or(z.literal('')),
+  category: z.string().min(1, 'Business category is required').optional(),
+  coordinates: z.object({
+    lat: z.number(),
+    lng: z.number()
+  }).optional()
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 const ProviderProfile = () => {
   const { data: provider, isLoading } = useProviderProfile();
+  const { data: categories = [] } = useServiceCategories();
   const updateProfile = useUpdateProviderProfile();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    business_name: '',
-    business_description: '',
-    business_address: '',
-    business_phone: '',
-    business_email: '',
+
+  // Debug categories
+  React.useEffect(() => {
+    console.log('Available categories:', categories);
+  }, [categories]);
+
+  // Initialize form with React Hook Form
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      businessName: '',
+      businessDescription: '',
+      businessAddress: '',
+      businessPhone: '',
+      businessEmail: '',
+      website: '',
+      category: '',
+      coordinates: undefined
+    }
   });
+
+  const { control, handleSubmit, reset, formState: { errors, isDirty } } = form;
 
   React.useEffect(() => {
     if (provider) {
-      setFormData({
-        business_name: provider.business_name || '',
-        business_description: provider.business_description || '',
-        business_address: provider.business_address || '',
-        business_phone: provider.business_phone || '',
-        business_email: provider.business_email || '',
-      });
+      console.log('Provider data:', provider);
+      console.log('Provider category:', provider.category);
+      const initialData = {
+        businessName: provider.businessName || '',
+        businessDescription: provider.businessDescription || '',
+        businessAddress: provider.businessAddress || '',
+        businessPhone: provider.businessPhone || '',
+        businessEmail: provider.businessEmail || '',
+        website: provider.website || '',
+        category: provider.category?._id || provider.category || '',
+        coordinates: provider.coordinates || undefined
+      };
+      console.log('Form initial data:', initialData);
+      reset(initialData);
     }
-  }, [provider]);
+  }, [provider, reset]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  // Handle map address selection (only updates coordinates, not the address field)
+  const handleMapAddressSelect = (address: string, coordinates: { lat: number; lng: number }) => {
+    console.log('Map address selected:', address, coordinates);
+    // Only update coordinates, not the address field
+    form.setValue('coordinates', coordinates, { shouldDirty: true });
+  };
+
+
+  // Form submit handler
+  const onSubmit = async (data: ProfileFormData) => {
     try {
-      await updateProfile.mutateAsync(formData);
-      setIsEditing(false);
+      console.log('Form data being submitted:', data);
+      
+      // Transform data to match API expectations
+      const apiData = {
+        businessName: data.businessName,
+        businessDescription: data.businessDescription,
+        businessAddress: data.businessAddress,
+        businessPhone: data.businessPhone,
+        businessEmail: data.businessEmail,
+        website: data.website,
+        category: data.category,
+        coordinates: data.coordinates && data.coordinates.lat && data.coordinates.lng 
+          ? data.coordinates 
+          : undefined
+      };
+      
+      console.log('API data:', apiData);
+      
+      await updateProfile.mutateAsync(apiData);
       toast({
         title: "Profile updated",
         description: "Your business profile has been updated successfully.",
       });
     } catch (error) {
+      console.error('Profile update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     }
@@ -93,13 +162,15 @@ const ProviderProfile = () => {
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">Business Profile</h1>
-            <Button
-              onClick={() => setIsEditing(!isEditing)}
-              variant={isEditing ? "outline" : "default"}
-            >
-              {isEditing ? "Cancel" : "Edit Profile"}
-            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Business Profile</h1>
+              {isDirty && (
+                <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-amber-600 rounded-full"></span>
+                  You have unsaved changes
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Profile Card */}
@@ -113,117 +184,163 @@ const ProviderProfile = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Always show editable form */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div>
-                    <Label htmlFor="business_name">Business Name</Label>
-                    <Input
-                      id="business_name"
-                      value={formData.business_name}
-                      onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                      required
+                    <Label htmlFor="businessName">Business Name <span className="text-red-500">*</span></Label>
+                    <Controller
+                      name="businessName"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="businessName"
+                          className={errors.businessName ? 'border-red-500' : ''}
+                        />
+                      )}
+                    />
+                    {errors.businessName && (
+                      <p className="text-sm text-red-500 mt-1">{errors.businessName.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="businessDescription">Business Description</Label>
+                    <Controller
+                      name="businessDescription"
+                      control={control}
+                      render={({ field }) => (
+                        <Textarea
+                          {...field}
+                          id="businessDescription"
+                          rows={3}
+                        />
+                      )}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="business_description">Business Description</Label>
-                    <Textarea
-                      id="business_description"
-                      value={formData.business_description}
-                      onChange={(e) => setFormData({ ...formData, business_description: e.target.value })}
-                      rows={3}
+                    <Label htmlFor="businessAddress">Business Address</Label>
+                    <Controller
+                      name="businessAddress"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="businessAddress"
+                        />
+                      )}
+                    />
+                  </div>
+
+                  {/* Map Component - coordinates updated separately from address text field */}
+                  <div>
+                    <ProviderMap
+                      address={provider?.businessAddress || ''}
+                      businessName={provider?.businessName || ''}
+                      coordinates={
+                        (form.watch('coordinates') && form.watch('coordinates')?.lat && form.watch('coordinates')?.lng) 
+                          ? form.watch('coordinates') 
+                          : (provider?.coordinates && provider.coordinates.lat && provider.coordinates.lng)
+                            ? provider.coordinates
+                            : null
+                      }
+                      onAddressSelect={handleMapAddressSelect}
+                      isEditing={true}
+                      height="300px"
+                    />
+                  </div>
+
+
+                  <div>
+                    <Label htmlFor="businessPhone">Phone Number</Label>
+                    <Controller
+                      name="businessPhone"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="businessPhone"
+                          type="tel"
+                        />
+                      )}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="business_address">Business Address</Label>
-                    <Input
-                      id="business_address"
-                      value={formData.business_address}
-                      onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                    <Label htmlFor="businessEmail">Business Email <span className="text-red-500">*</span></Label>
+                    <Controller
+                      name="businessEmail"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="businessEmail"
+                          type="email"
+                          className={errors.businessEmail ? 'border-red-500' : ''}
+                        />
+                      )}
                     />
+                    {errors.businessEmail && (
+                      <p className="text-sm text-red-500 mt-1">{errors.businessEmail.message}</p>
+                    )}
                   </div>
 
                   <div>
-                    <Label htmlFor="business_phone">Phone Number</Label>
-                    <Input
-                      id="business_phone"
-                      type="tel"
-                      value={formData.business_phone}
-                      onChange={(e) => setFormData({ ...formData, business_phone: e.target.value })}
+                    <Label htmlFor="website">Website</Label>
+                    <Controller
+                      name="website"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="website"
+                          type="url"
+                          placeholder="https://your-website.com"
+                          className={errors.website ? 'border-red-500' : ''}
+                        />
+                      )}
                     />
+                    {errors.website && (
+                      <p className="text-sm text-red-500 mt-1">{errors.website.message}</p>
+                    )}
                   </div>
 
                   <div>
-                    <Label htmlFor="business_email">Business Email</Label>
-                    <Input
-                      id="business_email"
-                      type="email"
-                      value={formData.business_email}
-                      onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
+                    <Label htmlFor="category">Business Category</Label>
+                    <Controller
+                      name="category"
+                      control={control}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category._id} value={category._id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     />
+                    {errors.category && (
+                      <p className="text-sm text-red-500 mt-1">{errors.category.message}</p>
+                    )}
                   </div>
 
                   <div className="flex gap-2 pt-4">
-                    <Button type="submit" disabled={updateProfile.isPending}>
+                    <Button 
+                      type="submit" 
+                      disabled={updateProfile.isPending || !isDirty}
+                      className={!isDirty ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
                       {updateProfile.isPending ? "Saving..." : "Save Changes"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-                      Cancel
-                    </Button>
                   </div>
-                </form>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">{provider.business_name}</h3>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                      <span className="font-medium">{provider.rating || 0}</span>
-                      <span className="text-gray-500">({provider.total_reviews || 0} reviews)</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    {provider.business_description && (
-                      <div>
-                        <Label className="text-sm font-medium text-gray-600">Description</Label>
-                        <p className="mt-1 text-gray-900">{provider.business_description}</p>
-                      </div>
-                    )}
-
-                    {provider.business_address && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-gray-500 mt-1" />
-                        <div>
-                          <Label className="text-sm font-medium text-gray-600">Address</Label>
-                          <p className="mt-1 text-gray-900">{provider.business_address}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {provider.business_phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-500" />
-                        <div>
-                          <Label className="text-sm font-medium text-gray-600">Phone</Label>
-                          <p className="mt-1 text-gray-900">{provider.business_phone}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {provider.business_email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-gray-500" />
-                        <div>
-                          <Label className="text-sm font-medium text-gray-600">Email</Label>
-                          <p className="mt-1 text-gray-900">{provider.business_email}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              </form>
             </CardContent>
           </Card>
         </div>

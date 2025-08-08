@@ -1,0 +1,189 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  ProviderService, 
+  ServiceService, 
+  BookingService,
+  type CreateProviderData,
+  type CreateServiceData 
+} from '@/integrations/mongodb';
+import { useAuth } from '@/contexts/AuthContext';
+
+export const useProviderProfile = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['providerProfile', user?._id],
+    queryFn: async () => {
+      if (!user?._id) throw new Error('No user ID');
+      
+      const provider = await ProviderService.getProviderByUserId(user._id);
+      return provider;
+    },
+    enabled: !!user?._id,
+  });
+};
+
+export const useCreateProviderProfile = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (providerData: {
+      businessName: string;
+      businessDescription?: string;
+      businessAddress?: string;
+      businessPhone?: string;
+      businessEmail?: string;
+      latitude?: number;
+      longitude?: number;
+    }) => {
+      if (!user?._id) throw new Error('User not authenticated');
+
+      const createData: CreateProviderData = {
+        userId: user._id,
+        businessName: providerData.businessName,
+        businessDescription: providerData.businessDescription,
+        businessEmail: providerData.businessEmail,
+        businessPhone: providerData.businessPhone,
+        businessAddress: providerData.businessAddress,
+        latitude: providerData.latitude,
+        longitude: providerData.longitude,
+      };
+
+      return await ProviderService.createProvider(createData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerProfile'] });
+    },
+  });
+};
+
+export const useUpdateProviderProfile = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (updates: {
+      businessName?: string;
+      businessDescription?: string;
+      businessAddress?: string;
+      businessPhone?: string;
+      businessEmail?: string;
+      latitude?: number;
+      longitude?: number;
+    }) => {
+      if (!user?._id) throw new Error('User not authenticated');
+
+      const provider = await ProviderService.getProviderByUserId(user._id);
+      if (!provider) throw new Error('Provider profile not found');
+
+      return await ProviderService.updateProvider(provider._id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerProfile'] });
+    },
+  });
+};
+
+export const useProviderBookings = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['providerBookings', user?._id],
+    queryFn: async () => {
+      if (!user?._id) throw new Error('No user ID');
+      
+      const provider = await ProviderService.getProviderByUserId(user._id);
+      if (!provider) return [];
+
+      return await BookingService.getBookingsByProvider(provider._id);
+    },
+    enabled: !!user?._id,
+  });
+};
+
+export const useAllProviders = () => {
+  return useQuery({
+    queryKey: ['allProviders'],
+    queryFn: async () => {
+      return await ProviderService.getAllProviders();
+    },
+  });
+};
+
+export const useAllBookings = () => {
+  return useQuery({
+    queryKey: ['allBookings'],
+    queryFn: async () => {
+      // This would need to be implemented as an admin function
+      // For now, return empty array as a placeholder
+      return [];
+    },
+  });
+};
+
+export const useProviderServices = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['providerServices', user?._id],
+    queryFn: async () => {
+      if (!user?._id) throw new Error('No user ID');
+      
+      const provider = await ProviderService.getProviderByUserId(user._id);
+      if (!provider) return [];
+
+      return await ServiceService.getServicesByProvider(provider._id);
+    },
+    enabled: !!user?._id,
+  });
+};
+
+export const useCreateService = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (serviceData: {
+      name: string;
+      description?: string;
+      price: number;
+      durationMinutes: number;
+      categoryId?: string;
+    }) => {
+      if (!user?._id) throw new Error('User not authenticated');
+
+      const provider = await ProviderService.getProviderByUserId(user._id);
+      if (!provider) throw new Error('Provider profile not found');
+
+      const createData: CreateServiceData = {
+        providerId: provider._id,
+        name: serviceData.name,
+        description: serviceData.description,
+        price: serviceData.price,
+        durationMinutes: serviceData.durationMinutes,
+        categoryId: serviceData.categoryId,
+      };
+
+      return await ServiceService.createService(createData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerServices'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+};
+
+export const useUpdateService = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+      return await ServiceService.updateService(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providerServices'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+};

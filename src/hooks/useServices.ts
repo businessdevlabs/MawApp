@@ -1,46 +1,45 @@
-
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiService } from '../services/api';
 
-export const useServices = () => {
+interface UseServicesFilters {
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  location?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const useServices = (filters?: UseServicesFilters) => {
   return useQuery({
-    queryKey: ['services'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('services')
-        .select(`
-          *,
-          provider:service_providers!fk_services_provider_id(*),
-          category:service_categories!fk_services_category_id(*)
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
+    queryKey: ['services', filters],
+    queryFn: () => apiService.getAllServices(filters),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
 export const useService = (serviceId: string) => {
   return useQuery({
     queryKey: ['service', serviceId],
-    queryFn: async () => {
-      if (!serviceId) throw new Error('Service ID is required');
-      
-      const { data, error } = await supabase
-        .from('services')
-        .select(`
-          *,
-          provider:service_providers!fk_services_provider_id(*),
-          category:service_categories!fk_services_category_id(*)
-        `)
-        .eq('id', serviceId)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => apiService.getServiceById(serviceId),
     enabled: !!serviceId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useServicesByCategory = (
+  categoryId: string,
+  params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }
+) => {
+  return useQuery({
+    queryKey: ['services', 'category', categoryId, params],
+    queryFn: () => apiService.getServicesByCategory(categoryId, params),
+    enabled: !!categoryId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

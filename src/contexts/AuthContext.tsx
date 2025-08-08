@@ -1,19 +1,14 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
-import type { Tables } from '@/integrations/supabase/types';
+import { apiService, type User } from '@/services/api';
 
-type Profile = Tables<'profiles'>;
-
-interface AuthUser extends Profile {
+interface AuthUser extends User {
   email: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   profile: AuthUser | null;
-  session: Session | null;
+  session: { token: string } | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -33,87 +28,57 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<{ token: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        
-        if (session?.user) {
-          // Fetch user profile from our profiles table
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profile && !error) {
-            setUser({
-              ...profile,
-              email: session.user.email || profile.email
-            });
-          } else {
-            console.error('Error fetching profile:', error);
-            setUser(null);
+    const initializeAuth = async () => {
+      try {
+        // Check for existing session
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          try {
+            const userData = await apiService.verifyToken(token);
+            setUser(userData as AuthUser);
+            setSession({ token });
+          } catch (error) {
+            // Token is invalid, remove it
+            localStorage.removeItem('authToken');
+            console.log('Invalid token removed');
           }
-        } else {
-          setUser(null);
         }
-        
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      // The onAuthStateChange will handle setting user and session
-    });
-
-    return () => subscription.unsubscribe();
+    initializeAuth();
   }, []);
 
   const register = async (email: string, password: string, name: string, role: string) => {
     setLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
       console.log('Starting registration process...', {
         email,
         name,
-        password,
-        role,
-        redirectUrl
+        role
       });
 
-      const { data, error } = await supabase.auth.signUp({
+      const { user: newUser, token } = await apiService.register({
         email,
         password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: name,
-            role: role
-          }
-        }
+        fullName: name,
+        role: role as 'client' | 'provider' | 'admin'
       });
 
-      if (error) {
-        console.error('Supabase registration error:', error);
-        throw error;
-      }
+      // Store token and set user state
+      localStorage.setItem('authToken', token);
+      setUser(newUser as AuthUser);
+      setSession({ token });
 
-      console.log('Registration successful:', data.user?.email);
-      
-      if (data.user && !data.session) {
-        // User needs to confirm email
-        throw new Error('Please check your email and click the confirmation link to complete registration.');
-      }
-      
+      console.log('Registration successful:', newUser.email);
     } catch (error: any) {
       console.error('Registration error:', error);
       throw new Error(error.message || 'Registration failed');
@@ -125,14 +90,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { user: userData, token } = await apiService.login({
         email,
-        password,
+        password
       });
 
-      if (error) throw error;
+      // Store token and set user state
+      localStorage.setItem('authToken', token);
+      setUser(userData as AuthUser);
+      setSession({ token });
       
-      console.log('Login successful:', data.user?.email);
+      console.log('Login successful:', userData.email);
     } catch (error: any) {
       console.error('Login error:', error);
       throw new Error(error.message || 'Login failed');
@@ -143,9 +111,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await apiService.logout();
       
+      // Remove token and clear state
+      localStorage.removeItem('authToken');
       setUser(null);
       setSession(null);
       console.log('Logout successful');

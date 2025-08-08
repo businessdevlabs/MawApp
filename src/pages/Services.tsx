@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useServices } from '@/hooks/useServices';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Search, 
@@ -22,24 +24,65 @@ import {
 
 const Services = () => {
   const navigate = useNavigate();
-  const { data: services, isLoading } = useServices();
+  const { user } = useAuth();
+  const { data: servicesData, isLoading: servicesLoading } = useServices();
+  const { data: categoriesData, isLoading: categoriesLoading } = useServiceCategories();
+  const services = servicesData?.services || [];
+  const categories = categoriesData?.categories || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const categories = [
+  const isLoading = servicesLoading || categoriesLoading;
+
+
+  const handleBookNow = (serviceId: string) => {
+    if (!user) {
+      // Store the intended destination for after login
+      localStorage.setItem('redirectAfterLogin', `/service/${serviceId}`);
+      navigate('/login');
+    } else {
+      navigate(`/service/${serviceId}`);
+    }
+  };
+
+  // Map categories from API to display format
+  const displayCategories = [
     { id: 'all', name: 'All Services', icon: Users },
-    { id: 'Beauty & Hair', name: 'Beauty & Hair', icon: Scissors },
-    { id: 'Fitness', name: 'Fitness', icon: Dumbbell },
-    { id: 'Wellness', name: 'Spa & Wellness', icon: Heart },
-    { id: 'Nails', name: 'Nails & Beauty', icon: Palette },
-    { id: 'Health', name: 'Health & Therapy', icon: Heart }
+    ...categories.map(category => ({
+      id: category.name,
+      name: category.name,
+      icon: getIconForCategory(category.name)
+    }))
   ];
 
+  // Helper function to get appropriate icon for each category
+  function getIconForCategory(categoryName: string) {
+    switch (categoryName) {
+      case 'Beauty & Personal Care':
+        return Scissors;
+      case 'Health & Wellness':
+        return Heart;
+      case 'Technology Services':
+        return Users; // Could use a computer icon if available
+      case 'Professional Services':
+        return Users;
+      case 'Home & Maintenance':
+        return Users;
+      case 'Education & Training':
+        return Users;
+      default:
+        return Users;
+    }
+  }
+
   const filteredServices = services?.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         service.provider?.business_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || 
+      service.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.providerId?.businessName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesCategory = selectedCategory === 'all' || service.category?.name === selectedCategory;
+    
     return matchesSearch && matchesCategory;
   }) || [];
 
@@ -90,7 +133,7 @@ const Services = () => {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
+            {displayCategories.map((category) => (
               <Button
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
@@ -115,13 +158,15 @@ const Services = () => {
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((service) => (
-            <Card key={service.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <Card key={service._id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
               <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
                 <div className="text-6xl opacity-20">
-                  {service.category?.name === 'Beauty & Hair' && '💇'}
-                  {service.category?.name === 'Fitness' && '💪'}
-                  {service.category?.name === 'Wellness' && '🧘'}
-                  {service.category?.name === 'Health' && '🏥'}
+                  {service.category?.name === 'Beauty & Personal Care' && '💇'}
+                  {service.category?.name === 'Health & Wellness' && '🏥'}
+                  {service.category?.name === 'Technology Services' && '💻'}
+                  {service.category?.name === 'Professional Services' && '💼'}
+                  {service.category?.name === 'Home & Maintenance' && '🔧'}
+                  {service.category?.name === 'Education & Training' && '📚'}
                   {!service.category && '⭐'}
                 </div>
                 <div className="absolute bottom-4 left-4">
@@ -137,10 +182,10 @@ const Services = () => {
                   <div className="flex items-center text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
                     <span className="ml-1 text-sm font-medium text-gray-900">
-                      {service.provider?.rating || 4.8}
+                      {service.providerId?.averageRating || 4.8}
                     </span>
                     <span className="ml-1 text-sm text-gray-500">
-                      ({service.provider?.total_reviews || 0})
+                      ({service.providerId?.totalReviews || 0})
                     </span>
                   </div>
                 </div>
@@ -156,11 +201,11 @@ const Services = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
                   <div className="flex items-center">
                     <MapPin className="w-4 h-4 mr-2" />
-                    <span className="truncate">{service.provider?.business_name}</span>
+                    <span className="truncate">{service.providerId?.businessName}</span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2" />
-                    {service.duration_minutes} min
+                    {service.duration} min
                   </div>
                 </div>
                 
@@ -168,7 +213,7 @@ const Services = () => {
                   <span className="font-semibold text-blue-600 text-lg">
                     ${service.price}
                   </span>
-                  <Button onClick={() => navigate(`/service/${service.id}`)}>
+                  <Button onClick={() => handleBookNow(service._id)}>
                     Book Now
                   </Button>
                 </div>
