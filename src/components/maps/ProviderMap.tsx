@@ -74,7 +74,7 @@ const ProviderMap: React.FC<ProviderMapProps> = ({
       return;
     }
 
-    const API_KEY = "AIzaSyD-BhJgZM8dru-G3CHAU7Y0rMk65ixgK-U";
+    const API_KEY = "28218";
 
 
     // Create and load the script

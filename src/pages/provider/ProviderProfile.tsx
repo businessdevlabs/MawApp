@@ -234,7 +234,7 @@ const ProviderProfile = () => {
                   </div>
 
                   {/* Map Component - coordinates updated separately from address text field */}
-                  <div>
+                  {/* <div>
                     <ProviderMap
                       address={provider?.businessAddress || ''}
                       businessName={provider?.businessName || ''}
@@ -249,7 +249,7 @@ const ProviderProfile = () => {
                       isEditing={true}
                       height="300px"
                     />
-                  </div>
+                  </div> */}
 
 
                   <div>
