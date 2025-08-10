@@ -94,7 +94,7 @@ export const useProviderBookings = (params?: {
         if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const queryString = queryParams.toString();
-        const endpoint = `http://localhost:3001/api/bookings${queryString ? `?${queryString}` : ''}`;
+        const endpoint = `/api/bookings${queryString ? `?${queryString}` : ''}`;
 
         const response = await fetch(endpoint, {
           headers: {
@@ -195,7 +195,7 @@ export const useUpdateBookingStatus = () => {
       status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
       cancellationReason?: string;
     }) => {
-      const response = await fetch(`http://localhost:3001/api/bookings/${id}/status`, {
+      const response = await fetch(`/api/bookings/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -242,7 +242,7 @@ export const useProviderPayments = (params?: {
         if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const queryString = queryParams.toString();
-        const endpoint = `http://localhost:3001/api/provider/payments${queryString ? `?${queryString}` : ''}`;
+        const endpoint = `/api/provider/payments${queryString ? `?${queryString}` : ''}`;
 
         const response = await fetch(endpoint, {
           headers: {

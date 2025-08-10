@@ -5,7 +5,7 @@ export const useBookings = () => {
     queryKey: ['bookings'],
     queryFn: async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/bookings', {
+        const response = await fetch('/api/bookings', {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -60,7 +60,7 @@ export const useCreateBooking = () => {
       total_price: number;
       notes?: string;
     }) => {
-      const response = await fetch('http://localhost:3001/api/bookings', {
+      const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ export const useUpdateBooking = () => {
       status: string;
       cancellationReason?: string;
     }) => {
-      const response = await fetch(`http://localhost:3001/api/bookings/${id}/status`, {
+      const response = await fetch(`/api/bookings/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

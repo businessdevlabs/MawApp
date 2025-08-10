@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-const BASE_URL = 'http://localhost:3001/api';
+const BASE_URL = '/api';
 
 // Types
 interface AdminStats {

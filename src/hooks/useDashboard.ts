@@ -36,7 +36,7 @@ export const useDashboardStats = () => {
     queryKey: ['dashboardStats'],
     queryFn: async (): Promise<DashboardStats> => {
       try {
-        const response = await fetch('http://localhost:3001/api/bookings/stats', {
+        const response = await fetch('/api/bookings/stats', {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -86,7 +86,7 @@ export const useUpcomingBookings = () => {
     queryKey: ['upcomingBookings'],
     queryFn: async (): Promise<UpcomingBooking[]> => {
       try {
-        const response = await fetch('http://localhost:3001/api/bookings/upcoming', {
+        const response = await fetch('/api/bookings/upcoming', {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -123,7 +123,7 @@ export const useRecentActivity = () => {
     queryKey: ['recentActivity'],
     queryFn: async (): Promise<RecentActivity[]> => {
       try {
-        const response = await fetch('http://localhost:3001/api/bookings?limit=5', {
+        const response = await fetch('/api/bookings?limit=5', {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
