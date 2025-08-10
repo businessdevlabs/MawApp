@@ -19,9 +19,9 @@ import ProviderMap from '@/components/maps/ProviderMap';
 // Form validation schema
 const profileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  businessDescription: z.string().optional(),
-  businessAddress: z.string().optional(),
-  businessPhone: z.string().optional(),
+  businessDescription: z.string().min(10, 'Business description must be at least 10 characters'),
+  businessAddress: z.string().min(5, 'Business address is required'),
+  businessPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
   businessEmail: z.string().email('Please enter a valid email address').optional(),
   website: z.string().url('Please enter a valid website URL (e.g., https://example.com)').or(z.literal('')),
   category: z.string().min(1, 'Business category is required').optional(),
@@ -204,7 +204,7 @@ const ProviderProfile = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="businessDescription">Business Description</Label>
+                    <Label htmlFor="businessDescription">Business Description <span className="text-red-500">*</span></Label>
                     <Controller
                       name="businessDescription"
                       control={control}
@@ -213,13 +213,17 @@ const ProviderProfile = () => {
                           {...field}
                           id="businessDescription"
                           rows={3}
+                          className={errors.businessDescription ? 'border-red-500' : ''}
                         />
                       )}
                     />
+                    {errors.businessDescription && (
+                      <p className="text-sm text-red-500 mt-1">{errors.businessDescription.message}</p>
+                    )}
                   </div>
 
                   <div>
-                    <Label htmlFor="businessAddress">Business Address</Label>
+                    <Label htmlFor="businessAddress">Business Address <span className="text-red-500">*</span></Label>
                     <Controller
                       name="businessAddress"
                       control={control}
@@ -227,9 +231,13 @@ const ProviderProfile = () => {
                         <Input
                           {...field}
                           id="businessAddress"
+                          className={errors.businessAddress ? 'border-red-500' : ''}
                         />
                       )}
                     />
+                    {errors.businessAddress && (
+                      <p className="text-sm text-red-500 mt-1">{errors.businessAddress.message}</p>
+                    )}
                   </div>
 
                   {/* Map Component - coordinates updated separately from address text field */}
@@ -252,7 +260,7 @@ const ProviderProfile = () => {
 
 
                   <div>
-                    <Label htmlFor="businessPhone">Phone Number</Label>
+                    <Label htmlFor="businessPhone">Phone Number <span className="text-red-500">*</span></Label>
                     <Controller
                       name="businessPhone"
                       control={control}
@@ -261,9 +269,13 @@ const ProviderProfile = () => {
                           {...field}
                           id="businessPhone"
                           type="tel"
+                          className={errors.businessPhone ? 'border-red-500' : ''}
                         />
                       )}
                     />
+                    {errors.businessPhone && (
+                      <p className="text-sm text-red-500 mt-1">{errors.businessPhone.message}</p>
+                    )}
                   </div>
 
                   <div>
