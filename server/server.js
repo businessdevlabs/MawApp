@@ -34,6 +34,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// Debug middleware to check if static files exist
+app.use('/assets/*', (req, res, next) => {
+  const filePath = path.join(__dirname, 'public', req.path);
+  console.log(`Static file request: ${req.path}, checking: ${filePath}`);
+  next();
+});
+
 // Serve static files from the React app with proper MIME types and cache control
 app.use(express.static('public', {
   maxAge: 0, // Disable caching for now to force fresh assets
@@ -76,10 +83,13 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Catch all handler: send back React's index.html file for SPA routing (only for non-API routes)
+// Catch all handler: send back React's index.html file for SPA routing (only for non-API and non-static routes)
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     res.status(404).json({ error: 'API route not found' });
+  } else if (req.path.startsWith('/assets/') || req.path.endsWith('.js') || req.path.endsWith('.css') || req.path.endsWith('.ico')) {
+    // This shouldn't happen if static middleware works correctly, but just in case
+    res.status(404).json({ error: 'Static asset not found' });
   } else {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
