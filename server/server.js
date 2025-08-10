@@ -34,15 +34,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Debug middleware to check if static files exist
-app.use('/assets/*', (req, res, next) => {
+// Debug middleware to check if static files exist  
+app.use('/assets', (req, res, next) => {
   const filePath = path.join(__dirname, 'public', req.path);
   console.log(`Static file request: ${req.path}, checking: ${filePath}`);
+  console.log(`Working directory: ${__dirname}`);
   next();
 });
 
 // Serve static files from the React app with proper MIME types and cache control
-app.use(express.static('public', {
+app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: 0, // Disable caching for now to force fresh assets
   setHeaders: (res, path) => {
     if (path.endsWith('.js')) {
