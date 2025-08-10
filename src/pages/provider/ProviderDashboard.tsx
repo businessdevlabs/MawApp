@@ -30,9 +30,9 @@ const ProviderDashboard = () => {
   const hasServices = services.length > 0;
   const hasSchedule = schedules.some(s => s.isAvailable);
   const hasProfile = !!(provider && provider.businessName && (
-    provider.businessDescription || 
-    provider.businessAddress || 
-    provider.businessPhone || 
+    provider.businessDescription &&
+    provider.businessAddress &&
+    provider.businessPhone &&
     provider.businessEmail
   ));
 
