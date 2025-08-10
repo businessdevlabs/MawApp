@@ -102,7 +102,7 @@ export interface ProviderSchedule {
 }
 
 class ApiService {
-  private baseUrl = 'http://localhost:3001/api';
+  private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
   
   // Helper method to make HTTP requests
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
