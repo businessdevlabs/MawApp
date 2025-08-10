@@ -34,11 +34,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Debug middleware - remove this after fixing
+// Debug middleware - log all requests
 app.use((req, res, next) => {
-  if (req.path.startsWith('/assets/')) {
-    console.log(`Asset request: ${req.path}, __dirname: ${__dirname}`);
-  }
+  console.log(`Request: ${req.method} ${req.path}`);
   next();
 });
 
