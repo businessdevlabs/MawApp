@@ -34,11 +34,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Debug middleware to check if static files exist  
-app.use('/assets', (req, res, next) => {
-  const filePath = path.join(__dirname, 'public', req.path);
-  console.log(`Static file request: ${req.path}, checking: ${filePath}`);
-  console.log(`Working directory: ${__dirname}`);
+// Debug middleware - remove this after fixing
+app.use((req, res, next) => {
+  if (req.path.startsWith('/assets/')) {
+    console.log(`Asset request: ${req.path}, __dirname: ${__dirname}`);
+  }
   next();
 });
 
