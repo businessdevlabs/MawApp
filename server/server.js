@@ -34,13 +34,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the React app with proper MIME types
+// Serve static files from the React app with proper MIME types and cache control
 app.use(express.static('public', {
+  maxAge: 0, // Disable caching for now to force fresh assets
   setHeaders: (res, path) => {
     if (path.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     } else if (path.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
   }
 }));
