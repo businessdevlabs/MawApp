@@ -22,7 +22,7 @@ const profileSchema = z.object({
   businessDescription: z.string().optional(),
   businessAddress: z.string().optional(),
   businessPhone: z.string().optional(),
-  businessEmail: z.string().email('Please enter a valid email address'),
+  businessEmail: z.string().email('Please enter a valid email address').optional(),
   website: z.string().url('Please enter a valid website URL (e.g., https://example.com)').or(z.literal('')),
   category: z.string().min(1, 'Business category is required').optional(),
   coordinates: z.object({
@@ -93,17 +93,16 @@ const ProviderProfile = () => {
     try {
       console.log('Form data being submitted:', data);
       
-      // Transform data to match API expectations
+      // Transform data to match API expectations (exclude businessEmail as it's read-only)
       const apiData = {
         businessName: data.businessName,
         businessDescription: data.businessDescription,
         businessAddress: data.businessAddress,
         businessPhone: data.businessPhone,
-        businessEmail: data.businessEmail,
         website: data.website,
         category: data.category,
-        coordinates: data.coordinates && data.coordinates.lat && data.coordinates.lng 
-          ? data.coordinates 
+        coordinates: data.coordinates && typeof data.coordinates.lat === 'number' && typeof data.coordinates.lng === 'number'
+          ? { lat: data.coordinates.lat, lng: data.coordinates.lng }
           : undefined
       };
       
@@ -268,7 +267,7 @@ const ProviderProfile = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="businessEmail">Business Email <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="businessEmail">Business Email</Label>
                     <Controller
                       name="businessEmail"
                       control={control}
@@ -277,13 +276,12 @@ const ProviderProfile = () => {
                           {...field}
                           id="businessEmail"
                           type="email"
-                          className={errors.businessEmail ? 'border-red-500' : ''}
+                          disabled
+                          className="bg-gray-50 text-gray-600 cursor-not-allowed"
                         />
                       )}
                     />
-                    {errors.businessEmail && (
-                      <p className="text-sm text-red-500 mt-1">{errors.businessEmail.message}</p>
-                    )}
+                    <p className="text-sm text-gray-500 mt-1">Business email is set to your account email and cannot be changed</p>
                   </div>
 
                   <div>

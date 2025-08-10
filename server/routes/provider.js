@@ -33,7 +33,6 @@ router.put('/profile', [
   body('businessDescription').optional().trim(),
   body('businessAddress').optional().trim(),
   body('businessPhone').optional().trim(),
-  body('businessEmail').optional().isEmail().normalizeEmail(),
   body('website').optional().isURL(),
   body('category').optional().isMongoId(),
   body('coordinates').optional(),
@@ -62,12 +61,13 @@ router.put('/profile', [
       businessDescription,
       businessAddress,
       businessPhone,
-      businessEmail,
       website,
       category,
       businessHours,
       coordinates
     } = req.body;
+
+    // BusinessEmail is not allowed to be updated - it's set to the user's email and should remain unchanged
 
     // Validate category if provided
     if (category) {
@@ -82,7 +82,6 @@ router.put('/profile', [
       businessDescription,
       businessAddress,
       businessPhone,
-      businessEmail,
       website,
       category,
       businessHours,
@@ -104,7 +103,6 @@ router.put('/profile', [
       businessDescription,
       businessAddress,
       businessPhone,
-      businessEmail,
       website,
       category,
       businessHours

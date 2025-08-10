@@ -53,6 +53,7 @@ router.post('/register', [
       const provider = new ServiceProvider({
         userId: user._id,
         businessName: fullName, // Default to user's name, can be updated later
+        businessEmail: email, // Set business email to user's email
         status: 'pending'
       });
       await provider.save();
