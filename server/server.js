@@ -34,8 +34,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the React app
-app.use(express.static('public'));
+// Serve static files from the React app with proper MIME types
+app.use(express.static('public', {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -63,9 +71,13 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Catch all handler: send back React's index.html file for SPA routing
+// Catch all handler: send back React's index.html file for SPA routing (only for non-API routes)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  if (req.path.startsWith('/api/')) {
+    res.status(404).json({ error: 'API route not found' });
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
 });
 
 // Database connection
