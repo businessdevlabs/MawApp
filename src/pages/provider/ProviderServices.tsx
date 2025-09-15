@@ -345,7 +345,7 @@ const ProviderServices = () => {
                       placeholder="Valid ID, Prior appointment"
                     />
                   </div>
-                  <div>
+                  {/* <div>
                     <Label htmlFor="tags">Tags (comma separated)</Label>
                     <Input
                       id="tags"
@@ -353,7 +353,7 @@ const ProviderServices = () => {
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                       placeholder="professional, consultation"
                     />
-                  </div>
+                  </div> */}
                   <div className="flex justify-end space-x-2">
                     <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancel

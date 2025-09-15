@@ -50,6 +50,35 @@ export const useProviderProfile = () => {
   });
 };
 
+export const useProviderDetail = (providerId: string) => {
+  return useQuery({
+    queryKey: ['providerDetail', providerId],
+    queryFn: async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${baseUrl}/providers/${providerId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch provider details');
+        }
+
+        const data = await response.json();
+        return data.provider || data;
+      } catch (error) {
+        console.error('Failed to fetch provider details:', error);
+        throw error;
+      }
+    },
+    enabled: !!providerId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
 export const useCreateProviderProfile = () => {
   const queryClient = useQueryClient();
 
@@ -94,7 +123,8 @@ export const useProviderBookings = (params?: {
         if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const queryString = queryParams.toString();
-        const endpoint = `/api/bookings${queryString ? `?${queryString}` : ''}`;
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const endpoint = `${baseUrl}/bookings${queryString ? `?${queryString}` : ''}`;
 
         const response = await fetch(endpoint, {
           headers: {
@@ -118,12 +148,60 @@ export const useProviderBookings = (params?: {
   });
 };
 
-export const useAllProviders = () => {
+export const useAllProviders = (filters?: {
+  category?: string;
+  search?: string;
+  minRating?: number;
+  maxRating?: number;
+  location?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  hasWebsite?: boolean;
+  hasPhone?: boolean;
+  page?: number;
+  limit?: number;
+}) => {
   return useQuery({
-    queryKey: ['allProviders'],
+    queryKey: ['allProviders', filters],
     queryFn: async () => {
-      return [];
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        if (filters?.category) queryParams.append('category', filters.category);
+        if (filters?.search) queryParams.append('search', filters.search);
+        if (filters?.minRating) queryParams.append('minRating', filters.minRating.toString());
+        if (filters?.maxRating) queryParams.append('maxRating', filters.maxRating.toString());
+        if (filters?.location) queryParams.append('location', filters.location);
+        if (filters?.sortBy) queryParams.append('sortBy', filters.sortBy);
+        if (filters?.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+        if (filters?.hasWebsite !== undefined) queryParams.append('hasWebsite', filters.hasWebsite.toString());
+        if (filters?.hasPhone !== undefined) queryParams.append('hasPhone', filters.hasPhone.toString());
+        if (filters?.page) queryParams.append('page', filters.page.toString());
+        if (filters?.limit) queryParams.append('limit', filters.limit.toString());
+
+        const url = `${baseUrl}/providers${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch providers');
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Failed to fetch providers:', error);
+        return { providers: [], pagination: { totalProviders: 0, totalPages: 0, currentPage: 1, limit: 50 } };
+      }
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -195,7 +273,8 @@ export const useUpdateBookingStatus = () => {
       status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
       cancellationReason?: string;
     }) => {
-      const response = await fetch(`/api/bookings/${id}/status`, {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${baseUrl}/bookings/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -242,7 +321,8 @@ export const useProviderPayments = (params?: {
         if (params?.limit) queryParams.append('limit', params.limit.toString());
 
         const queryString = queryParams.toString();
-        const endpoint = `/api/provider/payments${queryString ? `?${queryString}` : ''}`;
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const endpoint = `${baseUrl}/provider/payments${queryString ? `?${queryString}` : ''}`;
 
         const response = await fetch(endpoint, {
           headers: {

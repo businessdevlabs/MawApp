@@ -36,7 +36,8 @@ export const useDashboardStats = () => {
     queryKey: ['dashboardStats'],
     queryFn: async (): Promise<DashboardStats> => {
       try {
-        const response = await fetch('/api/bookings/stats', {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${baseUrl}/bookings/stats`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -86,7 +87,8 @@ export const useUpcomingBookings = () => {
     queryKey: ['upcomingBookings'],
     queryFn: async (): Promise<UpcomingBooking[]> => {
       try {
-        const response = await fetch('/api/bookings/upcoming', {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${baseUrl}/bookings/upcoming`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -123,7 +125,8 @@ export const useRecentActivity = () => {
     queryKey: ['recentActivity'],
     queryFn: async (): Promise<RecentActivity[]> => {
       try {
-        const response = await fetch('/api/bookings?limit=5', {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${baseUrl}/bookings?limit=5`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`

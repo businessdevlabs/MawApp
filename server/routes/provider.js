@@ -33,8 +33,8 @@ router.put('/profile', [
   body('businessDescription').trim().isLength({ min: 10 }).withMessage('Business description must be at least 10 characters'),
   body('businessAddress').trim().isLength({ min: 5 }).withMessage('Business address is required'),
   body('businessPhone').trim().isLength({ min: 10 }).withMessage('Phone number must be at least 10 digits'),
-  body('website').optional().isURL(),
-  body('category').optional().isMongoId(),
+  body('website').optional({ nullable: true }).isURL(),
+  body('category').optional({ nullable: true }).isMongoId(),
   body('coordinates').optional(),
   body('coordinates.lat').optional(),
   body('coordinates.lng').optional()
@@ -241,7 +241,8 @@ router.put('/services/:serviceId', [
   requireRole(['provider']),
   body('name').optional().trim().isLength({ min: 2 }),
   body('description').optional().trim().isLength({ min: 10 }),
-  body('category').optional().isMongoId(),
+  body('category').optional({ nullable: true }).isMongoId(),
+  body('website').optional({ nullable: true }).isString(),
   body('price').optional().isNumeric().isFloat({ min: 0 }),
   body('duration').optional().isInt({ min: 1 })
 ], async (req, res) => {

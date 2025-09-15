@@ -11,7 +11,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Services from "./pages/Services";
+import Providers from "./pages/Providers";
 import ServiceDetail from "./pages/ServiceDetail";
+import ProviderDetail from "./pages/ProviderDetail";
 import MyBookings from "./pages/MyBookings";
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderProfile from "./pages/provider/ProviderProfile";
@@ -62,7 +64,16 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/providers" 
+                element={
+                  <ProtectedRoute redirectProvidersTo="/provider/dashboard">
+                    <Providers />
+                  </ProtectedRoute>
+                } 
+              />
               <Route path="/service/:serviceId" element={<ServiceDetail />} />
+              <Route path="/provider/:providerId" element={<ProviderDetail />} />
               <Route path="/bookings" element={<MyBookings />} />
               
               {/* Provider Routes */}

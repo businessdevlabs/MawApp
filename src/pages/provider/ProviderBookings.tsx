@@ -41,10 +41,17 @@ const ProviderBookings = () => {
   const filterBookings = (filter: string) => {
     switch (filter) {
       case 'today':
-        return bookings.filter(booking => isToday(new Date(booking.appointmentDate)));
+        return bookings.filter(booking =>
+          isToday(new Date(booking.appointmentDate)) &&
+          booking.status !== 'cancelled' &&
+          booking.status !== 'no_show'
+        );
       case 'upcoming':
-        return bookings.filter(booking => 
-          new Date(booking.appointmentDate) > new Date() && !isToday(new Date(booking.appointmentDate))
+        return bookings.filter(booking =>
+          new Date(booking.appointmentDate) > new Date() &&
+          !isToday(new Date(booking.appointmentDate)) &&
+          booking.status !== 'cancelled' &&
+          booking.status !== 'no_show'
         );
       case 'past':
         return bookings.filter(booking => isPast(new Date(booking.appointmentDate)));

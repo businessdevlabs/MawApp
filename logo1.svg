@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+
+  <!-- Calendar frame -->
+  <rect x="28" y="44" width="200" height="184" rx="28"/>
+  <!-- Binder rings -->
+  <line x1="84" y1="28" x2="84" y2="64"/>
+  <line x1="172" y1="28" x2="172" y2="64"/>
+  <!-- Header separator -->
+  <line x1="40" y1="88" x2="216" y2="88"/>
+  <!-- Date dots -->
+  <g stroke="none" fill="currentColor">
+    <circle cx="88" cy="116" r="10"/>
+    <circle cx="128" cy="116" r="10"/>
+    <circle cx="168" cy="116" r="10"/>
+  </g>
+  <!-- Integrated M -->
+  <path d="M56 208v-56a12 12 0 0 1 12-12h10a12 12 0 0 1 10 6l30 36 30-36a12 12 0 0 1 10-6h10a12 12 0 0 1 12 12v56"/>
+</svg>

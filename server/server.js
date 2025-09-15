@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import authRoutes from './routes/auth.js';
 import providerRoutes from './routes/provider.js';
+import providersRoutes from './routes/providers.js';
 import categoriesRoutes from './routes/categories.js';
 import servicesRoutes from './routes/services.js';
 import bookingRoutes from './routes/bookings.js';
@@ -22,7 +23,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
   credentials: true
 }));
 app.use(express.json());
@@ -59,6 +60,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/provider', providerRoutes);
+app.use('/api/providers', providersRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/bookings', bookingRoutes);

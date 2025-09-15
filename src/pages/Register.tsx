@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,12 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar, Loader2 } from 'lucide-react';
 
 const Register = () => {
+  const [searchParams] = useSearchParams();
+  const defaultRole = searchParams.get('role') === 'provider' ? 'provider' : 'client';
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'client'
+    role: defaultRole
   });
   const [loading, setLoading] = useState(false);
   const { register, user } = useAuth();
@@ -138,7 +141,7 @@ const Register = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="client" id="client" />
-                    <Label htmlFor="client">Book services</Label>
+                    <Label htmlFor="client">Book appointments</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="provider" id="provider" />

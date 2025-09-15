@@ -87,10 +87,10 @@ const Home = () => {
       <section className="bg-gradient-to-br from-blue-50 via-white to-teal-50 py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Book your next appointment with <span className="text-blue-600">ease</span>
+            Book your next <span className="text-blue-600">appointment</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Discover and book appointments with top-rated service providers. From hair salons to fitness centers, find exactly what you need.
+            Find and book with top-rated providers near you
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/services">
@@ -99,7 +99,7 @@ const Home = () => {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to="/register?role=provider">
               <Button size="lg" variant="outline" className="px-8 py-3">
                 Join as Provider
               </Button>
@@ -129,7 +129,7 @@ const Home = () => {
       {/* Features */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Choose BookEase?</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Why Choose Mawaad?</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <div key={index} className="text-center">
@@ -201,7 +201,7 @@ const Home = () => {
             Join thousands of satisfied customers who trust BookEase
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/register">
+            <Link to="/register?role=provider">
               <Button size="lg" variant="secondary" className="px-8 py-3">
                 Sign Up Now
               </Button>

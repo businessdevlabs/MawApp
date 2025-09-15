@@ -23,12 +23,12 @@ const profileSchema = z.object({
   businessAddress: z.string().min(5, 'Business address is required'),
   businessPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
   businessEmail: z.string().email('Please enter a valid email address').optional(),
-  website: z.string().url('Please enter a valid website URL (e.g., https://example.com)').or(z.literal('')),
-  category: z.string().min(1, 'Business category is required').optional(),
+  website: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
   coordinates: z.object({
-    lat: z.number(),
-    lng: z.number()
-  }).optional()
+    lat: z.number().optional().nullable(),
+    lng: z.number().optional().nullable(),
+  }).optional().nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -53,14 +53,15 @@ const ProviderProfile = () => {
       businessAddress: '',
       businessPhone: '',
       businessEmail: '',
-      website: '',
-      category: '',
+      website: null,
+      category: null,
       coordinates: undefined
     }
   });
 
   const { control, handleSubmit, reset, formState: { errors, isDirty } } = form;
 
+  console.log('errors22', errors);
   React.useEffect(() => {
     if (provider) {
       console.log('Provider data:', provider);
@@ -71,9 +72,9 @@ const ProviderProfile = () => {
         businessAddress: provider.businessAddress || '',
         businessPhone: provider.businessPhone || '',
         businessEmail: provider.businessEmail || '',
-        website: provider.website || '',
-        category: provider.category?._id || provider.category || '',
-        coordinates: provider.coordinates || undefined
+        website: provider.website,
+        category: provider.category?._id || provider.category,
+        coordinates: provider.coordinates,
       };
       console.log('Form initial data:', initialData);
       reset(initialData);
