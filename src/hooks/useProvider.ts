@@ -9,6 +9,8 @@ interface ProviderProfileData {
   businessEmail?: string;
   website?: string;
   category?: string;
+  subcategory?: string;
+  profilePhoto?: string;
   coordinates?: { lat: number; lng: number };
   [key: string]: unknown;
 }
@@ -20,6 +22,10 @@ interface ServiceData {
   duration: number;
   categoryId: string;
   isActive?: boolean;
+  maxBookingsPerDay?: number;
+  requirements?: string[];
+  tags?: string[];
+  slots?: string[];
   [key: string]: unknown;
 }
 
@@ -34,6 +40,7 @@ interface ServiceUpdate {
   maxBookingsPerDay?: number;
   requirements?: string[];
   tags?: string[];
+  slots?: string[];
 }
 
 export const useProviderProfile = () => {
@@ -97,7 +104,8 @@ export const useUpdateProviderProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (updates: ProviderProfileData) => apiService.updateProviderProfile(updates),
+    mutationFn: ({ profileData, profilePhoto }: { profileData: ProviderProfileData; profilePhoto?: File }) =>
+      apiService.updateProviderProfile(profileData, profilePhoto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['providerProfile'] });
     },

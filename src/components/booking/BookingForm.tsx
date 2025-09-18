@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCreateBooking } from '@/hooks/useBookings';
 import { useToast } from '@/hooks/use-toast';
 import TimeSlotPicker from './TimeSlotPicker';
-import { Calendar, Clock, MapPin, User, DollarSign } from 'lucide-react';
+import { CalendarToday, Schedule, LocationOn, Person, AttachMoney } from '@mui/icons-material';
 import { format } from 'date-fns';
 
 interface Service {
@@ -31,9 +31,10 @@ interface Service {
 
 interface BookingFormProps {
   service: Service;
+  onSuccess?: () => void;
 }
 
-const BookingForm = ({ service }: BookingFormProps) => {
+const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -72,7 +73,11 @@ const BookingForm = ({ service }: BookingFormProps) => {
         description: "Your appointment has been requested. You'll receive a confirmation soon.",
       });
 
-      navigate('/dashboard');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Booking error:', error);
       toast({
@@ -86,114 +91,68 @@ const BookingForm = ({ service }: BookingFormProps) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Service Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>{service.name}</span>
-            <Badge variant="secondary">${service.price}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="w-4 h-4 text-gray-500" />
-                <span>{service.providerId.businessName}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="w-4 h-4 text-gray-500" />
-                <span>{service.providerId.businessAddress}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <span>{service.duration} minutes</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">{service.description}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Rating:</span>
-                <Badge variant="outline">
-                  ⭐ {service.providerId.averageRating || 'N/A'} ({service.providerId.totalReviews || 0} reviews)
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+    <div className="space-y-4">
       {/* Time Slot Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Date & Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TimeSlotPicker
-            selectedDate={selectedDate}
-            selectedTime={selectedTime}
-            onDateSelect={setSelectedDate}
-            onTimeSelect={setSelectedTime}
-            duration={service.duration}
-          />
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="border-b border-gray-100 pb-3">
+          <h3 className="text-sm font-medium text-gray-900 mb-1">Select Date & Time</h3>
+          <p className="text-xs text-gray-600">Choose your preferred appointment slot</p>
+        </div>
+        <TimeSlotPicker
+          selectedDate={selectedDate}
+          selectedTime={selectedTime}
+          onDateSelect={setSelectedDate}
+          onTimeSelect={setSelectedTime}
+          duration={service.duration}
+        />
+      </div>
 
       {/* Additional Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Notes (Optional)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder="Any special requests or notes for your appointment..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-          />
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <div className="border-b border-gray-100 pb-2">
+          <h3 className="text-sm font-medium text-gray-900">Additional Notes (Optional)</h3>
+        </div>
+        <Textarea
+          placeholder="Any special requests or notes for your appointment..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          className="resize-none"
+        />
+      </div>
 
       {/* Booking Summary & Submit */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {selectedDate && selectedTime && (
+      <div className="space-y-4">
+        {selectedDate && selectedTime && (
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Appointment Summary</h4>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <CalendarToday className="w-4 h-4" style={{color: '#025bae'}} />
                 <span>{format(selectedDate, 'EEEE, MMMM do, yyyy')}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-500" />
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <Schedule className="w-4 h-4" style={{color: '#025bae'}} />
                 <span>{selectedTime} ({service.duration} minutes)</span>
               </div>
-            </div>
-          )}
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Total Amount:</span>
-            <div className="flex items-center gap-1">
-              <DollarSign className="w-4 h-4" />
-              <span className="text-lg font-bold">{service.price}</span>
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                <span className="text-sm font-medium text-gray-900">Total:</span>
+                <span className="text-lg font-bold" style={{color: '#025bae'}}>${service.price}</span>
+              </div>
             </div>
           </div>
+        )}
 
-          <Button 
-            onClick={handleSubmit}
-            disabled={!selectedDate || !selectedTime || isSubmitting}
-            className="w-full"
-            size="lg"
-          >
-            {isSubmitting ? 'Booking...' : 'Book Appointment'}
-          </Button>
-        </CardContent>
-      </Card>
+        <Button
+          onClick={handleSubmit}
+          disabled={!selectedDate || !selectedTime || isSubmitting}
+          className="w-full"
+          size="lg"
+          style={{backgroundColor: '#025bae'}}
+        >
+          {isSubmitting ? 'Booking...' : 'Book Appointment'}
+        </Button>
+      </div>
     </div>
   );
 };

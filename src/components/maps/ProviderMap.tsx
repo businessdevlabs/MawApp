@@ -48,6 +48,7 @@ const ProviderMap: React.FC<ProviderMapProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState(address || '');
+  const [showSearchInput, setShowSearchInput] = useState(false);
 
   // Default center (New York City) - memoized to prevent re-renders
   const defaultCenter = React.useMemo(() => ({ lat: 33.8963, lng: 35.5087 }), []);
@@ -74,7 +75,7 @@ const ProviderMap: React.FC<ProviderMapProps> = ({
       return;
     }
 
-    const API_KEY = "28218";
+    const API_KEY = "AIzaSyD-BhJgZM8dru-G3CHAU7Y0rMk65ixgK-U";
 
 
     // Create and load the script
@@ -387,10 +388,10 @@ const ProviderMap: React.FC<ProviderMapProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          {/* <CardTitle className="flex items-center gap-2">
             <MapPin className="w-5 h-5" />
             Business Location
-          </CardTitle>
+          </CardTitle> */}
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-red-600">
@@ -403,44 +404,55 @@ const ProviderMap: React.FC<ProviderMapProps> = ({
   }
 
   return (
-    <Card data-testid="provider-map">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="w-5 h-5" />
-          Business Location
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div data-testid="provider-map">
+      <CardContent className="space-y-4 p-0">
         {isEditing && (
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="address-search">Search for your business address</Label>
-              <form onSubmit={handleSearchSubmit} className="flex gap-2 mt-1">
+            <div className="flex items-center gap-3">
+              {/* Search Icon Button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSearchInput(!showSearchInput)}
+                className="flex items-center gap-2"
+              >
+                <Search className="w-4 h-4" />
+                {/* {showSearchInput ? 'Hide Search' : 'Search'} */}
+              </Button>
+
+              {/* OR Separator */}
+              {/* <span className="text-sm text-gray-500">OR</span> */}
+
+              {/* Use Current Location Button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={getCurrentLocation}
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                <Navigation className="w-4 h-4" />
+                Use Current Location
+              </Button>
+            </div>
+
+            {/* Search Input - Shows when search icon is clicked */}
+            {showSearchInput && (
+              <form onSubmit={handleSearchSubmit} className="w-4/5">
                 <Input
                   id="address-search"
                   ref={searchInputRef}
                   value={searchValue}
                   onChange={handleSearchChange}
-                  placeholder="Enter business address..."
-                  className="flex-1"
+                  placeholder="Search for business address..."
+                  className="w-full"
+                  autoFocus
                 />
-                <Button type="submit" size="sm" variant="outline">
-                  <Search className="w-4 h-4" />
-                </Button>
               </form>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={getCurrentLocation}
-                disabled={isLoading}
-              >
-                <Navigation className="w-4 h-4 mr-1" />
-                Use Current Location
-              </Button>
-            </div>
+            )}
+
             <p className="text-sm text-gray-600">
               Click on the map or drag the marker to set your exact location
             </p>
@@ -491,7 +503,7 @@ const ProviderMap: React.FC<ProviderMapProps> = ({
           </div>
         )}
       </CardContent>
-    </Card>
+    </div>
   );
 };
 

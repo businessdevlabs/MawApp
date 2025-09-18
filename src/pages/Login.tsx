@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Loader2 } from 'lucide-react';
+import { CalendarToday, AutorenewRounded } from '@mui/icons-material';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -62,7 +62,7 @@ const Login = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-teal-600 rounded-xl flex items-center justify-center">
-              <Calendar className="w-7 h-7 text-white" />
+              <CalendarToday className="w-7 h-7 text-white" />
             </div>
           </div>
           <h1 className="text-2xl font-bold">Welcome back</h1>
@@ -109,7 +109,7 @@ const Login = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <AutorenewRounded className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...
                   </>
                 ) : (

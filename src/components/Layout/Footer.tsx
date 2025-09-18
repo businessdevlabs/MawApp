@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Linkedin, Facebook, Twitter, Instagram } from 'lucide-react';
+import { LinkedIn, Facebook, Twitter, Instagram } from '@mui/icons-material';
 
 const Footer = () => {
   return (
@@ -60,7 +60,7 @@ const Footer = () => {
               <Instagram className="w-5 h-5" />
             </a>
             <a href="#" className="text-gray-400 hover:text-blue-600">
-              <Linkedin className="w-5 h-5" />
+              <LinkedIn className="w-5 h-5" />
             </a>
           </div>
         </div>

@@ -15,6 +15,7 @@ import Providers from "./pages/Providers";
 import ServiceDetail from "./pages/ServiceDetail";
 import ProviderDetail from "./pages/ProviderDetail";
 import MyBookings from "./pages/MyBookings";
+import Profile from "./pages/Profile";
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderProfile from "./pages/provider/ProviderProfile";
 import ProviderBookings from "./pages/provider/ProviderBookings";
@@ -64,17 +65,14 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
-              <Route 
-                path="/providers" 
-                element={
-                  <ProtectedRoute redirectProvidersTo="/provider/dashboard">
-                    <Providers />
-                  </ProtectedRoute>
-                } 
+              <Route
+                path="/providers"
+                element={<Providers />}
               />
               <Route path="/service/:serviceId" element={<ServiceDetail />} />
               <Route path="/provider/:providerId" element={<ProviderDetail />} />
               <Route path="/bookings" element={<MyBookings />} />
+              <Route path="/profile" element={<Profile />} />
               
               {/* Provider Routes */}
               <Route path="/provider/dashboard" element={<ProviderDashboard />} />

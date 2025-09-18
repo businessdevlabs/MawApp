@@ -43,3 +43,12 @@ export const useUpdateServiceCategory = () => {
     },
   });
 };
+
+export const useCategorySubcategories = (categoryId: string) => {
+  return useQuery({
+    queryKey: ['categorySubcategories', categoryId],
+    queryFn: () => apiService.getCategorySubcategories(categoryId),
+    enabled: !!categoryId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};

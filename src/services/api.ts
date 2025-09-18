@@ -58,6 +58,7 @@ export interface Service {
   maxBookingsPerDay: number;
   requirements: string[];
   tags: string[];
+  slots?: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -73,6 +74,8 @@ export interface ServiceProvider {
   businessEmail?: string;
   website?: string;
   category?: ServiceCategory;
+  subcategory?: string;
+  profilePhoto?: string;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   services: Service[];
   averageRating?: number;
@@ -213,18 +216,60 @@ class ApiService {
     return await this.makeRequest(`/categories/${categoryId}/services`);
   }
 
+  async getCategorySubcategories(categoryId: string): Promise<{ subcategories: string[] }> {
+    console.log('Fetching subcategories for category:', categoryId);
+    const response = await this.makeRequest(`/subcategories/${categoryId}`);
+    console.log('Subcategories response:', response);
+    return response;
+  }
+
   // Provider Profile
   async getProviderProfile(): Promise<ServiceProvider> {
     const response = await this.makeRequest('/provider/profile');
     return response.provider;
   }
 
-  async updateProviderProfile(profileData: Partial<ServiceProvider>): Promise<ServiceProvider> {
-    const response = await this.makeRequest('/provider/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
+  async updateProviderProfile(profileData: Partial<ServiceProvider>, profilePhoto?: File): Promise<ServiceProvider> {
+    const formData = new FormData();
+
+    // Add profile photo if provided
+    if (profilePhoto) {
+      formData.append('profilePhoto', profilePhoto);
+    }
+
+    // Add other profile data
+    Object.entries(profileData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'object') {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, String(value));
+        }
+      }
     });
-    return response.provider;
+
+    const url = `${this.baseUrl}/provider/profile`;
+
+    // Get token for authorization
+    const token = localStorage.getItem('authToken');
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return data.provider;
   }
 
   // Provider Services

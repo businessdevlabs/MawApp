@@ -48,6 +48,16 @@ const serviceProviderSchema = new mongoose.Schema({
     ref: 'ServiceCategory',
     required: false
   },
+  subcategory: {
+    type: String,
+    trim: true,
+    required: false
+  },
+  profilePhoto: {
+    type: String,
+    trim: true,
+    required: false
+  },
   services: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service'

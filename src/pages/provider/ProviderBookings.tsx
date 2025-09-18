@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
-import { Calendar, Clock, User, Phone, Mail, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CalendarToday, Schedule, Person, Phone, Email, CheckCircle, Cancel, Warning } from '@mui/icons-material';
 type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
 const ProviderBookings = () => {
@@ -64,124 +64,172 @@ const ProviderBookings = () => {
     }
   };
 
-  const BookingCard = ({ booking }: { booking: any }) => (
-    <Card className="mb-4">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 text-gray-500" />
-              <h3 className="font-semibold">{booking.clientId?.fullName || 'Unknown Client'}</h3>
-              <Badge 
-                variant={
-                  booking.status === 'confirmed' ? 'default' :
-                  booking.status === 'pending' ? 'secondary' :
-                  booking.status === 'completed' ? 'default' :
-                  booking.status === 'cancelled' ? 'destructive' :
-                  booking.status === 'no_show' ? 'destructive' :
-                  'outline'
-                }
-                className={
-                  booking.status === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-                  booking.status === 'cancelled' || booking.status === 'no_show' ? 'bg-red-100 text-red-800 hover:bg-red-100' :
-                  ''
-                }
-              >
-                {booking.status === 'no_show' ? 'No Show' : 
-                 booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-              </Badge>
-            </div>
-            
-            <div className="space-y-1 text-sm text-gray-600 mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {format(new Date(booking.appointmentDate), 'EEEE, MMMM do, yyyy')}
-                  {isToday(new Date(booking.appointmentDate)) && ' (Today)'}
-                  {isTomorrow(new Date(booking.appointmentDate)) && ' (Tomorrow)'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>{booking.startTime} ({booking.durationMinutes} min)</span>
-              </div>
-              <div className="font-medium">
-                Service: {booking.serviceId?.name}
-              </div>
-              {booking.clientId?.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  <span>{booking.clientId.phone}</span>
-                </div>
-              )}
-              {booking.clientId?.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  <span>{booking.clientId.email}</span>
-                </div>
-              )}
-              {booking.notes && (
-                <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                  <strong>Notes:</strong> {booking.notes}
-                </div>
-              )}
-            </div>
+  const BookingCard = ({ booking }: { booking: any }) => {
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case 'confirmed': return 'bg-blue-500';
+        case 'pending': return 'bg-amber-500';
+        case 'completed': return 'bg-green-500';
+        case 'cancelled':
+        case 'no_show': return 'bg-red-500';
+        default: return 'bg-gray-500';
+      }
+    };
 
-            <div className="text-lg font-semibold text-green-600">
-              ${booking.totalAmount}
-            </div>
-          </div>
+    const getStatusBadge = (status: string) => {
+      const badgeClass = status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                         status === 'cancelled' || status === 'no_show' ? 'bg-red-50 text-red-700 border-red-200' :
+                         status === 'confirmed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                         status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                         'bg-gray-50 text-gray-700 border-gray-200';
 
-          <div className="flex flex-col gap-2 ml-4">
-            {booking.status === 'pending' && (
-              <>
-                <Button
-                  size="sm"
-                  onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
-                  disabled={updateBookingStatus.isPending}
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Confirm
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
-                  disabled={updateBookingStatus.isPending}
-                >
-                  <XCircle className="w-4 h-4 mr-1" />
-                  Cancel
-                </Button>
-              </>
-            )}
-            
-            {booking.status === 'confirmed' && !isPast(new Date(booking.appointmentDate)) && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusUpdate(booking._id, 'completed')}
-                  disabled={updateBookingStatus.isPending}
-                >
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Complete
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleStatusUpdate(booking._id, 'no_show')}
-                  disabled={updateBookingStatus.isPending}
-                >
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  No Show
-                </Button>
-              </>
-            )}
+      return (
+        <Badge variant="outline" className={`font-medium ${badgeClass}`}>
+          {status === 'no_show' ? 'No Show' : status.charAt(0).toUpperCase() + status.slice(1)}
+        </Badge>
+      );
+    };
+
+    return (
+      <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow duration-200 border-0">
+        {/* Colored Header */}
+        <div className={`${getStatusColor(booking.status)} px-6 py-4 text-white`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-full">
+                <Person className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">
+                  {booking.clientId?.fullName || 'Unknown Client'}
+                </h3>
+                <p className="text-white/80 text-sm">
+                  {booking.serviceId?.name || 'Service'}
+                </p>
+              </div>
+            </div>
+            {getStatusBadge(booking.status)}
           </div>
         </div>
-      </CardContent>
-    </Card>
-  );
+
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              {/* Date & Time - More prominent */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarToday className="w-5 h-5 text-gray-400" />
+                  <span className="font-bold text-gray-900 text-base">
+                    {format(new Date(booking.appointmentDate), 'EEEE, MMMM do, yyyy')}
+                    {isToday(new Date(booking.appointmentDate)) &&
+                      <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Today
+                      </span>
+                    }
+                    {isTomorrow(new Date(booking.appointmentDate)) &&
+                      <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        Tomorrow
+                      </span>
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Schedule className="w-5 h-5 text-gray-400" />
+                  <span className="font-semibold text-gray-700">
+                    {booking.startTime} <span className="font-normal text-gray-500">({booking.durationMinutes} min)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-2 text-sm text-gray-600 mb-4">
+                {booking.clientId?.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="font-medium">{booking.clientId.phone}</span>
+                  </div>
+                )}
+                {booking.clientId?.email && (
+                  <div className="flex items-center gap-2">
+                    <Email className="w-4 h-4 text-gray-400" />
+                    <span className="font-medium">{booking.clientId.email}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              {booking.notes && (
+                <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-200 rounded-r">
+                  <div className="text-sm">
+                    <span className="font-semibold text-gray-700">Notes:</span>
+                    <p className="text-gray-600 mt-1">{booking.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Price */}
+              <div className="flex items-center justify-between">
+                <div className="text-xl font-bold text-green-600">
+                  ${booking.totalAmount}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2 ml-6">
+              {booking.status === 'pending' && (
+                <>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                    onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                    disabled={updateBookingStatus.isPending}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Confirm
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="shadow-sm"
+                    onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                    disabled={updateBookingStatus.isPending}
+                  >
+                    <Cancel className="w-4 h-4 mr-1" />
+                    Cancel
+                  </Button>
+                </>
+              )}
+
+              {booking.status === 'confirmed' && !isPast(new Date(booking.appointmentDate)) && (
+                <>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                    onClick={() => handleStatusUpdate(booking._id, 'completed')}
+                    disabled={updateBookingStatus.isPending}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Complete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-200 text-red-600 hover:bg-red-50 shadow-sm"
+                    onClick={() => handleStatusUpdate(booking._id, 'no_show')}
+                    disabled={updateBookingStatus.isPending}
+                  >
+                    <Warning className="w-4 h-4 mr-1" />
+                    No Show
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -211,13 +259,13 @@ const ProviderBookings = () => {
           <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
 
           <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="all">All ({bookings.length})</TabsTrigger>
-              <TabsTrigger value="today">Today ({filterBookings('today').length})</TabsTrigger>
-              <TabsTrigger value="upcoming">Upcoming ({filterBookings('upcoming').length})</TabsTrigger>
-              <TabsTrigger value="completed">Completed ({filterBookings('completed').length})</TabsTrigger>
-              <TabsTrigger value="cancelled">Cancelled ({filterBookings('cancelled').length})</TabsTrigger>
-              <TabsTrigger value="past">Past ({filterBookings('past').length})</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-6 bg-blue-500 border-0 rounded-lg p-1">
+              <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">All ({bookings.length})</TabsTrigger>
+              <TabsTrigger value="today" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Today ({filterBookings('today').length})</TabsTrigger>
+              <TabsTrigger value="upcoming" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Upcoming ({filterBookings('upcoming').length})</TabsTrigger>
+              <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Completed ({filterBookings('completed').length})</TabsTrigger>
+              <TabsTrigger value="cancelled" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Cancelled ({filterBookings('cancelled').length})</TabsTrigger>
+              <TabsTrigger value="past" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Past ({filterBookings('past').length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="space-y-4">

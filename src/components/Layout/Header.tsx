@@ -5,13 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, User, LogOut, Settings, Store, Clock, BarChart3, Shield, Users, List, Loader2 } from 'lucide-react';
+import { useProviderProfile } from '@/hooks/useProvider';
+import { CalendarToday, Person, Logout, Settings, Store, Schedule, BarChart, Shield, Groups, List, AutorenewRounded } from '@mui/icons-material';
 
 const Header = () => {
   const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Fetch provider profile data if user is a provider
+  const { data: providerData } = useProviderProfile(profile?.role === 'provider');
+
+  console.log('profilePhoto2', profile)
+  console.log('providerData', providerData)
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -25,6 +31,35 @@ const Header = () => {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isProvider = profile?.role === 'provider';
   const isAdmin = profile?.role === 'admin';
+
+  // Get profile photo - prioritize provider profile photo for providers
+  const getProfilePhoto = () => {
+    if (isProvider && providerData?.profilePhoto) {
+      return providerData.profilePhoto;
+    }
+    return profile?.avatarUrl || null;
+  };
+
+  const profilePhoto = getProfilePhoto();
+
+  // Helper function to determine if a link is active
+  const isActiveLink = (path: string) => {
+    return location.pathname === path;
+  };
+
+  // Helper function to get link classes
+  const getLinkClasses = (path: string) => {
+    const baseClasses = "transition-colors";
+    const activeClasses = "font-bold";
+    const inactiveClasses = "text-gray-600 hover:text-gray-900 font-medium";
+
+    return `${baseClasses} ${isActiveLink(path) ? activeClasses : inactiveClasses}`;
+  };
+
+  // Helper function to get link styles
+  const getLinkStyle = (path: string) => {
+    return isActiveLink(path) ? { color: '#025bae' } : {};
+  };
 
   return (
     <header className="shadow-sm border-b">
@@ -46,13 +81,13 @@ const Header = () => {
                 {isAdminRoute ? (
                   isAdmin && (
                     <>
-                      <Link to="/admin/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/admin/dashboard" className={getLinkClasses("/admin/dashboard")} style={getLinkStyle("/admin/dashboard")}>
                         Dashboard
                       </Link>
-                      <Link to="/admin/users" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/admin/users" className={getLinkClasses("/admin/users")} style={getLinkStyle("/admin/users")}>
                         Users
                       </Link>
-                      <Link to="/admin/settings" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/admin/settings" className={getLinkClasses("/admin/settings")} style={getLinkStyle("/admin/settings")}>
                         Settings
                       </Link>
                     </>
@@ -60,38 +95,38 @@ const Header = () => {
                 ) : isProviderRoute ? (
                   isProvider && (
                     <>
-                      <Link to="/provider/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/provider/dashboard" className={getLinkClasses("/provider/dashboard")} style={getLinkStyle("/provider/dashboard")}>
                         Dashboard
                       </Link>
-                      <Link to="/provider/services" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/provider/services" className={getLinkClasses("/provider/services")} style={getLinkStyle("/provider/services")}>
                         My Services
                       </Link>
-                      <Link to="/provider/bookings" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/provider/bookings" className={getLinkClasses("/provider/bookings")} style={getLinkStyle("/provider/bookings")}>
                         Appointments
                       </Link>
-                      <Link to="/provider/schedule" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/provider/schedule" className={getLinkClasses("/provider/schedule")} style={getLinkStyle("/provider/schedule")}>
                         Schedule
                       </Link>
-                      <Link to="/provider/profile" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/provider/profile" className={getLinkClasses("/provider/profile")} style={getLinkStyle("/provider/profile")}>
                         Business Profile
                       </Link>
                     </>
                   )
                 ) : (
                   <>
-                    {user && (<Link to="/services" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    {user && (<Link to="/services" className={getLinkClasses("/services")} style={getLinkStyle("/services")}>
                       Services
                     </Link>)}
-                    <Link to="/providers" className="text-gray-600 hover:text-gray-900 transition-colors">
+                    {/* <Link to="/providers" className={getLinkClasses("/providers")} style={getLinkStyle("/providers")}>
                       Providers
-                    </Link>
+                    </Link> */}
                     {user && (
-                      <Link to="/bookings" className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to="/bookings" className={getLinkClasses("/bookings")} style={getLinkStyle("/bookings")}>
                         My Bookings
                       </Link>
                     )}
                     {user && (
-                      <Link to={isProvider ? "/provider/dashboard" : "/dashboard"} className="text-gray-600 hover:text-gray-900 transition-colors">
+                      <Link to={isProvider ? "/provider/dashboard" : "/dashboard"} className={getLinkClasses(isProvider ? "/provider/dashboard" : "/dashboard")} style={getLinkStyle(isProvider ? "/provider/dashboard" : "/dashboard")}>
                         Dashboard
                       </Link>
                     )}
@@ -105,29 +140,49 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {loading ? (
               <div className="flex items-center space-x-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <AutorenewRounded className="w-4 h-4 animate-spin" />
                 <span className="text-sm text-gray-600">Loading...</span>
               </div>
             ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile?.avatar_url} alt={profile?.full_name} />
-                      <AvatarFallback>
-                        {profile?.full_name?.charAt(0) || user.email?.charAt(0)}
+              <div className="flex items-center space-x-3">
+                {/* Business status pill for providers */}
+                {isProvider && (
+                  <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full border border-blue-200">
+                    Business
+                  </div>
+                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-12 w-12 rounded-full hover:bg-gray-100 transition-colors">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={profilePhoto || undefined}
+                          alt={profile?.fullName}
+                        />
+                        <AvatarFallback className="bg-blue-500 text-white text-lg font-semibold">
+                          {profile?.fullName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-3 p-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={profilePhoto || undefined}
+                        alt={profile?.fullName}
+                      />
+                      <AvatarFallback className="bg-blue-500 text-white text-lg font-semibold">
+                        {profile?.fullName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{profile?.full_name || 'User'}</p>
-                      <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      <p className="font-semibold text-base text-gray-900">{profile?.fullName || 'User'}</p>
+                      <p className="w-[180px] truncate text-sm text-gray-600">
                         {user.email}
                       </p>
-                      <p className="text-xs text-muted-foreground capitalize">
+                      <p className="text-xs text-blue-600 font-medium capitalize bg-blue-50 px-2 py-1 rounded-full inline-block w-fit">
                         {profile?.role || 'User'}
                       </p>
                     </div>
@@ -158,32 +213,33 @@ const Header = () => {
                   {(isAdminRoute) && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/services')}>
-                        <Calendar className="mr-2 h-4 w-4" />
+                        <CalendarToday className="mr-2 h-4 w-4" />
                         Client View
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
 
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                    <User className="mr-2 h-4 w-4" />
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <Person className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
                   
                   {!isProviderRoute && !isAdminRoute && (
                     <DropdownMenuItem onClick={() => navigate('/bookings')}>
-                      <Calendar className="mr-2 h-4 w-4" />
+                      <CalendarToday className="mr-2 h-4 w-4" />
                       My Bookings
                     </DropdownMenuItem>
                   )}
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <Logout className="mr-2 h-4 w-4" />
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
+                </DropdownMenu>
+              </div>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" asChild>

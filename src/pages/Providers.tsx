@@ -14,23 +14,23 @@ import { useAllProviders } from '@/hooks/useProvider';
 import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Search, 
-  Filter, 
-  Star, 
-  MapPin, 
-  Clock, 
-  Scissors, 
-  Dumbbell, 
-  Heart,
-  Users,
-  Building,
+import {
+  Search,
+  FilterList,
+  Star,
+  LocationOn,
+  Schedule,
+  ContentCut,
+  FitnessCenter,
+  Favorite,
+  Groups,
+  Business,
   Phone,
-  Globe,
-  SlidersHorizontal,
-  ArrowUpDown,
-  X
-} from 'lucide-react';
+  Language,
+  Tune,
+  UnfoldMore,
+  Close
+} from '@mui/icons-material';
 
 const Providers = () => {
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ const Providers = () => {
 
   // Map categories from API to display format
   const displayCategories = [
-    { id: 'all', name: 'All Providers', icon: Users },
+    { id: 'all', name: 'All Providers', icon: Groups },
     ...categories.map(category => ({
       id: category.name,
       name: category.name,
@@ -94,19 +94,19 @@ const Providers = () => {
   function getIconForCategory(categoryName: string) {
     switch (categoryName) {
       case 'Beauty & Personal Care':
-        return Scissors;
+        return ContentCut;
       case 'Health & Wellness':
-        return Heart;
+        return Favorite;
       case 'Technology Services':
-        return Users;
+        return Groups;
       case 'Professional Services':
-        return Users;
+        return Groups;
       case 'Home & Maintenance':
-        return Users;
+        return Groups;
       case 'Education & Training':
-        return Users;
+        return Groups;
       default:
-        return Users;
+        return Groups;
     }
   }
 
@@ -164,7 +164,7 @@ const Providers = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Service Providers</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2" style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif'}}>Find Service Providers</h1>
           <p className="text-gray-600">Connect with verified professionals in your area</p>
         </div>
 
@@ -182,7 +182,7 @@ const Providers = () => {
               />
             </div>
             <div className="relative md:col-span-3">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <LocationOn className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
                 placeholder="Location..."
                 value={location}
@@ -193,7 +193,7 @@ const Providers = () => {
             <div className="md:col-span-3">
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="h-12">
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                  <UnfoldMore className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,6 +216,7 @@ const Providers = () => {
                 onClick={() => setSelectedCategory(category.id)}
                 className="flex items-center space-x-2"
                 size="sm"
+                style={selectedCategory === category.id ? {backgroundColor: '#025bae'} : {}}
               >
                 <category.icon className="w-4 h-4" />
                 <span>{category.name}</span>
@@ -230,7 +231,7 @@ const Providers = () => {
               <Sheet open={showFilters} onOpenChange={setShowFilters}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm" className="relative">
-                    <SlidersHorizontal className="w-4 h-4 mr-2" />
+                    <Tune className="w-4 h-4 mr-2" />
                     Advanced Filters
                     {activeFiltersCount > 0 && (
                       <Badge variant="destructive" className="ml-2 px-1 min-w-[20px] h-5">
@@ -279,7 +280,7 @@ const Providers = () => {
                             }
                           />
                           <Label htmlFor="has-website" className="flex items-center space-x-2">
-                            <Globe className="w-4 h-4" />
+                            <Language className="w-4 h-4" />
                             <span>Has Website</span>
                           </Label>
                         </div>
@@ -304,10 +305,10 @@ const Providers = () => {
                     {/* Clear Filters */}
                     <div className="flex justify-between pt-4">
                       <Button variant="outline" onClick={clearAllFilters}>
-                        <X className="w-4 h-4 mr-2" />
+                        <Close className="w-4 h-4 mr-2" />
                         Clear All
                       </Button>
-                      <Button onClick={() => setShowFilters(false)}>
+                      <Button onClick={() => setShowFilters(false)} style={{backgroundColor: '#025bae'}}>
                         Apply Filters
                       </Button>
                     </div>
@@ -325,7 +326,7 @@ const Providers = () => {
             {/* Clear all filters button */}
             {activeFiltersCount > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-gray-500 hover:text-gray-700">
-                <X className="w-4 h-4 mr-1" />
+                <Close className="w-4 h-4 mr-1" />
                 Clear all ({activeFiltersCount})
               </Button>
             )}
@@ -335,77 +336,97 @@ const Providers = () => {
         {/* Providers Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {providers.map((provider) => (
-            <Card key={provider._id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-              <div className="relative h-48 bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-                <div className="text-6xl opacity-20">
-                  {provider.category === 'Beauty & Personal Care' && '💇'}
-                  {provider.category === 'Health & Wellness' && '🏥'}
-                  {provider.category === 'Technology Services' && '💻'}
-                  {provider.category === 'Professional Services' && '💼'}
-                  {provider.category === 'Home & Maintenance' && '🔧'}
-                  {provider.category === 'Education & Training' && '📚'}
-                  {!provider.category && '🏢'}
-                </div>
-                <div className="absolute bottom-4 left-4">
-                  <Badge className="bg-green-100 text-green-800">
-                    Verified
-                  </Badge>
+            <Card key={provider._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
+              {/* Header with provider info */}
+              <div className="px-4 py-3 text-white" style={{backgroundColor: '#025bae'}}>
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    {provider.profilePhoto ? (
+                      <img
+                        src={provider.profilePhoto}
+                        alt={provider.businessName}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-lg truncate">{provider.businessName || 'Business Name'}</h3>
+                    <p className="text-white/80 text-sm truncate">
+                      {provider.category || 'General Services'}
+                    </p>
+                  </div>
                 </div>
               </div>
-              
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg">{provider.businessName || 'Business Name'}</h3>
-                  <div className="flex items-center text-yellow-500">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="ml-1 text-sm font-medium text-gray-900">
-                      {provider.averageRating || 4.8}
-                    </span>
-                    <span className="ml-1 text-sm text-gray-500">
-                      ({provider.totalReviews || 0})
-                    </span>
-                  </div>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                  {provider.businessDescription || 'Professional service provider'}
-                </p>
-                
-                <div className="mb-4">
-                  <Badge variant="outline" className="text-xs">
-                    {provider.category || 'General'}
-                  </Badge>
-                </div>
-                
-                <div className="space-y-2 text-sm text-gray-600 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">{provider.businessAddress || 'Location not specified'}</span>
-                  </div>
-                  {provider.businessPhone && (
-                    <div className="flex items-center">
-                      <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span>{provider.businessPhone}</span>
-                    </div>
+
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  {/* Description */}
+                  {provider.businessDescription && (
+                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
+                      {provider.businessDescription}
+                    </p>
                   )}
-                  {provider.website && (
-                    <div className="flex items-center">
-                      <Globe className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">Website</span>
+
+                  {/* Location and Contact */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <LocationOn style={{ fontSize: 16, color: '#025bae' }} />
+                      <span className="text-sm text-gray-900 truncate">{provider.businessAddress || 'Location not specified'}</span>
                     </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Building className="w-4 h-4 mr-1" />
-                      {provider.serviceCount || 0} services
+                    {provider.businessPhone && (
+                      <div className="flex items-center space-x-2">
+                        <Phone style={{ fontSize: 16, color: '#025bae' }} />
+                        <span className="text-sm text-gray-900">{provider.businessPhone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Services and Rating */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {provider.averageRating || 4.8}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({provider.totalReviews || 0})
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-1">
+                        <Business style={{ fontSize: 16, color: '#025bae' }} />
+                        <span className="text-sm text-gray-900">{provider.serviceCount || 0} services</span>
+                      </div>
+                      <Button onClick={() => handleViewProvider(provider._id)} size="sm" style={{backgroundColor: '#025bae'}} className="hover:opacity-90">
+                        View Profile
+                      </Button>
                     </div>
                   </div>
-                  <Button onClick={() => handleViewProvider(provider._id)}>
-                    View Profile
-                  </Button>
+
+                  {/* Badges */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap gap-1">
+                      {provider.subcategory && (
+                        <Badge variant="outline" className="text-xs">
+                          {provider.subcategory}
+                        </Badge>
+                      )}
+                      {provider.website && (
+                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                          Website
+                        </Badge>
+                      )}
+                    </div>
+                    <Badge className="bg-green-50 text-green-700 border-green-200">
+                      Verified
+                    </Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>

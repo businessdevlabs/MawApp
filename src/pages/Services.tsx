@@ -9,18 +9,19 @@ import { useServices } from '@/hooks/useServices';
 import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Search, 
-  Filter, 
-  Star, 
-  MapPin, 
-  Clock, 
-  Scissors, 
-  Dumbbell, 
-  Heart,
-  Users,
+import ServiceDetailModal from '@/components/modals/ServiceDetailModal';
+import {
+  Search,
+  FilterList,
+  Star,
+  LocationOn,
+  Schedule,
+  ContentCut,
+  FitnessCenter,
+  Favorite,
+  Groups,
   Palette
-} from 'lucide-react';
+} from '@mui/icons-material';
 
 const Services = () => {
   const navigate = useNavigate();
@@ -31,23 +32,31 @@ const Services = () => {
   const categories = categoriesData?.categories || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedService, setSelectedService] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isLoading = servicesLoading || categoriesLoading;
 
 
-  const handleBookNow = (serviceId: string) => {
+  const handleBookNow = (service: any) => {
     if (!user) {
       // Store the intended destination for after login
-      localStorage.setItem('redirectAfterLogin', `/service/${serviceId}`);
+      localStorage.setItem('redirectAfterLogin', `/service/${service._id}`);
       navigate('/login');
     } else {
-      navigate(`/service/${serviceId}`);
+      setSelectedService(service);
+      setIsModalOpen(true);
     }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedService(null);
   };
 
   // Map categories from API to display format
   const displayCategories = [
-    { id: 'all', name: 'All Services', icon: Users },
+    { id: 'all', name: 'All Services', icon: Groups },
     ...categories.map(category => ({
       id: category.name,
       name: category.name,
@@ -59,19 +68,19 @@ const Services = () => {
   function getIconForCategory(categoryName: string) {
     switch (categoryName) {
       case 'Beauty & Personal Care':
-        return Scissors;
+        return ContentCut;
       case 'Health & Wellness':
-        return Heart;
+        return Favorite;
       case 'Technology Services':
-        return Users; // Could use a computer icon if available
+        return Groups; // Could use a computer icon if available
       case 'Professional Services':
-        return Users;
+        return Groups;
       case 'Home & Maintenance':
-        return Users;
+        return Groups;
       case 'Education & Training':
-        return Users;
+        return Groups;
       default:
-        return Users;
+        return Groups;
     }
   }
 
@@ -148,7 +157,7 @@ const Services = () => {
 
           <div className="flex items-center space-x-4 text-sm text-gray-600">
             <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
+              <FilterList className="w-4 h-4 mr-2" />
               More Filters
             </Button>
             <span>{filteredServices.length} services found</span>
@@ -158,64 +167,75 @@ const Services = () => {
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((service) => (
-            <Card key={service._id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
-              <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-                <div className="text-6xl opacity-20">
-                  {service.category?.name === 'Beauty & Personal Care' && '💇'}
-                  {service.category?.name === 'Health & Wellness' && '🏥'}
-                  {service.category?.name === 'Technology Services' && '💻'}
-                  {service.category?.name === 'Professional Services' && '💼'}
-                  {service.category?.name === 'Home & Maintenance' && '🔧'}
-                  {service.category?.name === 'Education & Training' && '📚'}
-                  {!service.category && '⭐'}
-                </div>
-                <div className="absolute bottom-4 left-4">
-                  <Badge className="bg-white/90 text-gray-900">
-                    Available
-                  </Badge>
+            <Card key={service._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
+              {/* Header with service name */}
+              <div className="px-4 py-3 text-white" style={{backgroundColor: '#025bae'}}>
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    {service.providerId?.profilePhoto ? (
+                      <img
+                        src={service.providerId.profilePhoto}
+                        alt={service.providerId?.businessName}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {service.providerId?.businessName?.charAt(0)?.toUpperCase() || 'P'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-lg truncate">{service.name}</h3>
+                    <p className="text-white/80 text-sm truncate">
+                      {service.providerId?.businessName} ({service.category?.name || 'General Service'})
+                    </p>
+                  </div>
                 </div>
               </div>
-              
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg">{service.name}</h3>
-                  <div className="flex items-center text-yellow-500">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="ml-1 text-sm font-medium text-gray-900">
-                      {service.providerId?.averageRating || 4.8}
-                    </span>
-                    <span className="ml-1 text-sm text-gray-500">
-                      ({service.providerId?.totalReviews || 0})
-                    </span>
+
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  {/* Description */}
+                  {service.description && (
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {service.description}
+                    </p>
+                  )}
+
+                  {/* Provider and Duration */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <LocationOn style={{ fontSize: 16, color: '#025bae' }} />
+                      <span className="text-sm text-gray-900 truncate">{service.providerId?.businessName}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Schedule style={{ fontSize: 16, color: '#025bae' }} />
+                      <span className="text-sm text-gray-900">{service.duration} min</span>
+                    </div>
                   </div>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-3">{service.description}</p>
-                
-                <div className="mb-4">
-                  <Badge variant="outline" className="text-xs">
-                    {service.category?.name || 'General'}
-                  </Badge>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    <span className="truncate">{service.providerId?.businessName}</span>
+
+                  {/* Rating and Price */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {service.providerId?.averageRating || 4.8}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({service.providerId?.totalReviews || 0})
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="font-semibold text-lg" style={{color: '#025bae'}}>
+                        ${service.price}
+                      </span>
+                      <Button onClick={() => handleBookNow(service)} size="sm" style={{backgroundColor: '#025bae'}} className="hover:opacity-90">
+                        Book Now
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-2" />
-                    {service.duration} min
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-blue-600 text-lg">
-                    ${service.price}
-                  </span>
-                  <Button onClick={() => handleBookNow(service._id)}>
-                    Book Now
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -249,6 +269,13 @@ const Services = () => {
             </div>
           </div>
         )}
+
+        {/* Service Detail Modal */}
+        <ServiceDetailModal
+          service={selectedService}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
       </div>
     </div>
   );

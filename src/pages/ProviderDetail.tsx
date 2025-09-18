@@ -1,24 +1,39 @@
 import React from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useProviderDetail } from '@/hooks/useProvider';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  MapPin,
+  LocationOn,
   Phone,
-  Globe,
+  Language,
   Star,
-  Clock,
-  Users,
-  Calendar,
-  DollarSign
-} from 'lucide-react';
+  Schedule,
+  Groups,
+  CalendarToday,
+  AttachMoney
+} from '@mui/icons-material';
 
 const ProviderDetail = () => {
   const { providerId } = useParams<{ providerId: string }>();
+  const navigate = useNavigate();
   const { data: provider, isLoading, error } = useProviderDetail(providerId || '');
+
+  // Helper function to ensure URL has proper protocol
+  const formatWebsiteUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
+  // Handler for booking a service
+  const handleBookService = (serviceId: string) => {
+    navigate(`/service/${serviceId}`);
+  };
 
   if (!providerId) {
     return <Navigate to="/providers" replace />;
@@ -62,123 +77,131 @@ const ProviderDetail = () => {
   }
 
   return (
-    <div className="py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="relative h-32 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center">
-              <div className="text-6xl opacity-30">
-                {provider.category === 'Beauty & Personal Care' && '💇'}
-                {provider.category === 'Health & Wellness' && '🏥'}
-                {provider.category === 'Technology Services' && '💻'}
-                {provider.category === 'Professional Services' && '💼'}
-                {provider.category === 'Home & Maintenance' && '🔧'}
-                {provider.category === 'Education & Training' && '📚'}
-                {!provider.category && '🏢'}
-              </div>
-              <div className="absolute top-4 right-4">
-                <Badge className="bg-green-100 text-green-800">
-                  Verified
-                </Badge>
-              </div>
-            </div>
+        <div className="max-w-3xl mx-auto space-y-6">
 
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {provider.businessName || 'Business Name'}
-              </h1>
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="flex items-center text-yellow-500">
-                  <Star className="w-5 h-5 fill-current" />
-                  <span className="ml-1 font-medium text-gray-900">
-                    {String(provider.averageRating || 4.8)}
-                  </span>
-                  <span className="ml-1 text-gray-500">
-                    ({String(provider.totalReviews || 0)} reviews)
-                  </span>
+          {/* Provider Header Card */}
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div className="px-6 py-4 text-white" style={{backgroundColor: '#025bae'}}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  {provider.profilePhoto ? (
+                    <img
+                      src={provider.profilePhoto}
+                      alt={provider.businessName}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-white/20"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                      <span className="text-white font-semibold text-xl">
+                        {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-2xl font-semibold">{provider.businessName || 'Business Name'}</h1>
+                    <p className="text-white/80">{typeof provider.category === 'string' ? provider.category : provider.category?.name || 'General Services'}</p>
+                  </div>
                 </div>
-                <Badge variant="outline">
-                  {provider.category || 'General Services'}
-                </Badge>
+                <div className="text-right">
+                  <div className="flex items-center text-white/90">
+                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400 mr-1" />
+                    <span className="text-lg font-semibold">
+                      {String(provider.averageRating || 4.8)}
+                    </span>
+                  </div>
+                  <div className="text-white/80 text-sm">({String(provider.totalReviews || 0)} reviews)</div>
+                </div>
               </div>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                {provider.businessDescription || 'Professional service provider offering quality services'}
-              </p>
             </div>
-          </div>
 
-          {/* Contact & Location Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact & Location</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400" />
-                  <span>{provider.businessAddress || 'Location not specified'}</span>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="flex items-center space-x-2">
+                  <LocationOn style={{ fontSize: 16, color: '#025bae' }} />
+                  <span className="text-sm text-gray-900 truncate">{provider.businessAddress || 'Location not specified'}</span>
                 </div>
                 {provider.businessPhone && (
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5 text-gray-400" />
-                    <span>{provider.businessPhone}</span>
-                  </div>
-                )}
-                {provider.businessEmail && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="w-5 h-5 text-gray-400" />
-                    <span>{provider.businessEmail}</span>
+                  <div className="flex items-center space-x-2">
+                    <Phone style={{ fontSize: 16, color: '#025bae' }} />
+                    <span className="text-sm text-gray-900">{provider.businessPhone}</span>
                   </div>
                 )}
                 {provider.website && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="w-5 h-5 text-gray-400" />
+                  <div className="flex items-center space-x-2">
+                    <Language style={{ fontSize: 16, color: '#025bae' }} />
                     <a
-                      href={provider.website}
+                      href={formatWebsiteUrl(provider.website)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-sm text-gray-900 hover:underline"
                     >
                       Visit Website
                     </a>
                   </div>
                 )}
               </div>
+
+              {provider.businessDescription && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">About this business</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">{provider.businessDescription}</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="flex gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {typeof provider.category === 'string' ? provider.category : provider.category?.name || 'General Services'}
+                  </Badge>
+                  {provider.subcategory && (
+                    <Badge variant="outline" className="text-xs">
+                      {typeof provider.subcategory === 'string' ? provider.subcategory : provider.subcategory?.name || ''}
+                    </Badge>
+                  )}
+                </div>
+                <Badge className="bg-green-50 text-green-700 border-green-200">
+                  Verified Provider
+                </Badge>
+              </div>
             </CardContent>
           </Card>
 
           {/* Services */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Services ({String(provider.services?.length || 0)})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div className="px-6 py-3 text-white" style={{backgroundColor: '#025bae'}}>
+              <h2 className="text-lg font-semibold">Services ({String(provider.services?.length || 0)})</h2>
+            </div>
+            <CardContent className="p-6">
               {provider.services && provider.services.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {provider.services.map((service: any) => (
-                    <Card key={service._id} className="border">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
+                    <Card key={service._id} className="shadow-sm border-0 overflow-hidden">
+                      <div className="px-4 py-2 text-white" style={{backgroundColor: '#4a90e2'}}>
+                        <div className="flex items-center justify-between">
                           <h3 className="font-semibold">{service.name}</h3>
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
-                            {String(service.price || '0')}
-                          </Badge>
+                          <div className="text-lg font-bold">
+                            ${String(service.price || '0')}
+                          </div>
                         </div>
+                      </div>
+                      <CardContent className="p-4">
                         <p className="text-gray-600 text-sm mb-3">
                           {service.description || 'No description available'}
                         </p>
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            {String(service.duration || 0)} min
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Schedule style={{ fontSize: 16, color: '#025bae' }} />
+                            <span className="text-sm text-gray-900">{String(service.duration || 0)} minutes</span>
                           </div>
-                          <Button size="sm" variant="outline">
-                            <Calendar className="w-4 h-4 mr-1" />
+                          <Button
+                            size="sm"
+                            style={{backgroundColor: '#025bae'}}
+                            className="hover:opacity-90"
+                            onClick={() => handleBookService(service._id)}
+                          >
+                            <CalendarToday className="w-4 h-4 mr-1" />
                             Book Now
                           </Button>
                         </div>
@@ -188,7 +211,7 @@ const ProviderDetail = () => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <Groups className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No services available at the moment</p>
                 </div>
               )}
@@ -197,10 +220,10 @@ const ProviderDetail = () => {
 
           {/* Business Hours */}
           {provider.businessHours && (
-            <Card>
+            <Card className='p-8'>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
+                  <Schedule className="w-5 h-5" />
                   Business Hours
                 </CardTitle>
               </CardHeader>

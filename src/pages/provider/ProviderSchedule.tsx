@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock } from 'lucide-react';
+import { Schedule } from '@mui/icons-material';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sunday' },
@@ -153,29 +153,47 @@ const ProviderSchedule = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-2xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">Schedule Management</h1>
-            <Button onClick={handleSaveSchedule} disabled={createSchedule.isPending || updateSchedule.isPending}>
-              {(createSchedule.isPending || updateSchedule.isPending) ? "Saving..." : "Save Schedule"}
-            </Button>
-          </div>
+          {/* Header */}
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div className="px-6 py-4 text-white" style={{backgroundColor: '#025bae'}}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-2 rounded-full">
+                    <Schedule className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-semibold" style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif'}}>Schedule Management</h1>
+                    <p className="text-white/80">Set your weekly availability</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleSaveSchedule}
+                  disabled={createSchedule.isPending || updateSchedule.isPending}
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  {(createSchedule.isPending || updateSchedule.isPending) ? "Saving..." : "Save Schedule"}
+                </Button>
+              </div>
+            </div>
+          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div className="px-6 py-3 text-white" style={{backgroundColor: '#4a90e2'}}>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Schedule className="w-5 h-5" />
                 Weekly Availability
-              </CardTitle>
-            </CardHeader>
+              </h2>
+              <p className="text-white/80 text-sm">Toggle days and set your working hours</p>
+            </div>
             <CardContent className="space-y-6">
               {DAYS_OF_WEEK.map((day) => (
-                <div key={day.value} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={day.value} className="flex items-center justify-between p-4 border-l-4 bg-gray-50 hover:bg-gray-100 transition-colors" style={{borderLeftColor: scheduleData[day.value]?.isAvailable ? '#025bae' : '#d1d5db', borderRadius: '0 8px 8px 0'}}>
                   <div className="flex items-center space-x-4">
                     <Switch
                       checked={scheduleData[day.value]?.isAvailable || false}
                       onCheckedChange={(checked) => handleScheduleChange(day.value, 'isAvailable', checked)}
                     />
-                    <Label className="font-medium w-20">{day.label}</Label>
+                    <Label className="font-medium w-20 text-gray-900">{day.label}</Label>
                   </div>
                   
                   {scheduleData[day.value]?.isAvailable && (
@@ -200,10 +218,11 @@ const ProviderSchedule = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Schedule Instructions</CardTitle>
-            </CardHeader>
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div className="px-6 py-3 text-white" style={{backgroundColor: '#6b7280'}}>
+              <h2 className="text-lg font-semibold">Schedule Instructions</h2>
+              <p className="text-white/80 text-sm">How to manage your availability</p>
+            </div>
             <CardContent>
               <div className="space-y-2 text-sm text-gray-600">
                 <p>• Toggle the switch to enable availability for each day</p>

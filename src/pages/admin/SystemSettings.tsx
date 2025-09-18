@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Mail, Shield, Database, Bell, DollarSign } from 'lucide-react';
+import { Settings, Email, Shield, Storage, Notifications, AttachMoney } from '@mui/icons-material';
 
 const SystemSettings = () => {
   const { toast } = useToast();
@@ -112,7 +112,7 @@ const SystemSettings = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
+                    <AttachMoney className="h-5 w-5" />
                     Payment Settings
                   </CardTitle>
                 </CardHeader>
@@ -149,7 +149,7 @@ const SystemSettings = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
+                    <Notifications className="h-5 w-5" />
                     Notification Settings
                   </CardTitle>
                 </CardHeader>

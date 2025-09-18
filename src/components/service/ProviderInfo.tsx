@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, Clock, Mail, Globe, User } from 'lucide-react';
+import { Star, LocationOn, Phone, Schedule, Email, Language, Person } from '@mui/icons-material';
 
 interface ProviderInfoProps {
   provider: {
@@ -29,7 +29,7 @@ const ProviderInfo = ({ provider, duration, description }: ProviderInfoProps) =>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-blue-600" />
+                <Person className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -72,7 +72,7 @@ const ProviderInfo = ({ provider, duration, description }: ProviderInfoProps) =>
               
               {provider.businessAddress && (
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                  <LocationOn className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">{provider.businessAddress}</span>
                 </div>
               )}
@@ -86,14 +86,14 @@ const ProviderInfo = ({ provider, duration, description }: ProviderInfoProps) =>
               
               {provider.businessEmail && (
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  <Email className="w-4 h-4 text-gray-500 flex-shrink-0" />
                   <span className="text-sm text-gray-600">{provider.businessEmail}</span>
                 </div>
               )}
               
               {provider.website && (
                 <div className="flex items-center gap-3">
-                  <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  <Language className="w-4 h-4 text-gray-500 flex-shrink-0" />
                   <a 
                     href={provider.website} 
                     target="_blank" 
@@ -112,7 +112,7 @@ const ProviderInfo = ({ provider, duration, description }: ProviderInfoProps) =>
               </h4>
               
               <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <Schedule className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <span className="text-sm text-gray-600">{duration} minutes duration</span>
               </div>
 

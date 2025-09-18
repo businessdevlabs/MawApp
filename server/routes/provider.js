@@ -6,13 +6,17 @@ import ServiceCategory from '../models/ServiceCategory.js';
 import ProviderSchedule from '../models/ProviderSchedule.js';
 import Booking from '../models/Booking.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { uploadProfilePhoto, uploadToS3, handleUploadError } from '../middleware/upload.js';
+import s3Service from '../services/s3Service.js';
 
 const router = express.Router();
 
 // Get provider profile
 router.get('/profile', authenticateToken, requireRole(['provider']), async (req, res) => {
   try {
-    const provider = await ServiceProvider.findOne({ userId: req.user._id }).populate('services');
+    const provider = await ServiceProvider.findOne({ userId: req.user._id })
+      .populate('services')
+      .populate('category', 'name description');
     
     if (!provider) {
       return res.status(404).json({ error: 'Provider profile not found' });
@@ -29,33 +33,15 @@ router.get('/profile', authenticateToken, requireRole(['provider']), async (req,
 router.put('/profile', [
   authenticateToken,
   requireRole(['provider']),
-  body('businessName').trim().isLength({ min: 2 }),
-  body('businessDescription').trim().isLength({ min: 10 }).withMessage('Business description must be at least 10 characters'),
-  body('businessAddress').trim().isLength({ min: 5 }).withMessage('Business address is required'),
-  body('businessPhone').trim().isLength({ min: 10 }).withMessage('Phone number must be at least 10 digits'),
-  body('website').optional({ nullable: true }).isURL(),
-  body('category').optional({ nullable: true }).isMongoId(),
-  body('coordinates').optional(),
-  body('coordinates.lat').optional(),
-  body('coordinates.lng').optional()
+  uploadProfilePhoto,
+  uploadToS3,
+  handleUploadError
 ], async (req, res) => {
   try {
     console.log('Provider profile update request body:', req.body);
-    
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        error: 'Validation failed', 
-        details: errors.array() 
-      });
-    }
+    console.log('Provider profile update request file:', req.file);
 
-    const provider = await ServiceProvider.findOne({ userId: req.user._id });
-    
-    if (!provider) {
-      return res.status(404).json({ error: 'Provider profile not found' });
-    }
-
+    // Manual validation for FormData fields
     const {
       businessName,
       businessDescription,
@@ -63,9 +49,76 @@ router.put('/profile', [
       businessPhone,
       website,
       category,
+      subcategory,
       businessHours,
       coordinates
     } = req.body;
+
+    // Validate required fields
+    const validationErrors = [];
+
+    if (!businessName || businessName.trim().length < 2) {
+      validationErrors.push({ field: 'businessName', message: 'Business name must be at least 2 characters' });
+    }
+
+    if (!businessDescription || businessDescription.trim().length < 10) {
+      validationErrors.push({ field: 'businessDescription', message: 'Business description must be at least 10 characters' });
+    }
+
+    if (!businessAddress || businessAddress.trim().length < 5) {
+      validationErrors.push({ field: 'businessAddress', message: 'Business address is required' });
+    }
+
+    if (!businessPhone || businessPhone.trim().length < 10) {
+      validationErrors.push({ field: 'businessPhone', message: 'Phone number must be at least 10 digits' });
+    }
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+
+    const provider = await ServiceProvider.findOne({ userId: req.user._id });
+
+    if (!provider) {
+      return res.status(404).json({ error: 'Provider profile not found' });
+    }
+
+    // Parse coordinates if it's a string (from FormData)
+    let parsedCoordinates = coordinates;
+    if (typeof coordinates === 'string') {
+      try {
+        parsedCoordinates = JSON.parse(coordinates);
+      } catch (error) {
+        console.log('Could not parse coordinates:', coordinates);
+        parsedCoordinates = null;
+      }
+    }
+
+    // Handle profile photo upload to S3
+    let profilePhotoUrl = null;
+    if (req.s3Upload) {
+      profilePhotoUrl = req.s3Upload.url;
+      console.log('Profile photo uploaded to S3 successfully:', {
+        originalName: req.file.originalname,
+        s3Key: req.s3Upload.key,
+        s3Url: req.s3Upload.url,
+        size: req.file.size
+      });
+
+      // Delete old profile photo from S3 if it exists
+      if (provider.profilePhoto) {
+        const oldPhotoKey = s3Service.extractKeyFromUrl(provider.profilePhoto);
+        if (oldPhotoKey) {
+          await s3Service.deleteFile(oldPhotoKey);
+          console.log('Deleted old profile photo from S3:', oldPhotoKey);
+        }
+      }
+    } else {
+      console.log('No file uploaded in this request');
+    }
 
     // BusinessEmail is not allowed to be updated - it's set to the user's email and should remain unchanged
 
@@ -84,17 +137,18 @@ router.put('/profile', [
       businessPhone,
       website,
       category,
+      subcategory,
       businessHours,
       coordinates
     });
 
     console.log('Coordinates type check:', {
-      coordinates,
-      hasCoordinates: !!coordinates,
-      hasLat: coordinates && coordinates.lat !== undefined,
-      hasLng: coordinates && coordinates.lng !== undefined,
-      latValue: coordinates?.lat,
-      lngValue: coordinates?.lng
+      coordinates: parsedCoordinates,
+      hasCoordinates: !!parsedCoordinates,
+      hasLat: parsedCoordinates && parsedCoordinates.lat !== undefined,
+      hasLng: parsedCoordinates && parsedCoordinates.lng !== undefined,
+      latValue: parsedCoordinates?.lat,
+      lngValue: parsedCoordinates?.lng
     });
 
     // Handle coordinates separately if they exist
@@ -105,18 +159,24 @@ router.put('/profile', [
       businessPhone,
       website,
       category,
+      subcategory,
       businessHours
     };
 
-    if (coordinates && coordinates.lat !== undefined && coordinates.lng !== undefined) {
+    // Add profile photo to update data if uploaded
+    if (profilePhotoUrl) {
+      updateData.profilePhoto = profilePhotoUrl;
+    }
+
+    if (parsedCoordinates && parsedCoordinates.lat !== undefined && parsedCoordinates.lng !== undefined) {
       updateData.coordinates = {
-        lat: coordinates.lat,
-        lng: coordinates.lng
+        lat: parsedCoordinates.lat,
+        lng: parsedCoordinates.lng
       };
-      console.log('Adding coordinates to update:', coordinates);
+      console.log('Adding coordinates to update:', parsedCoordinates);
       console.log('Full update data:', updateData);
     } else {
-      console.log('Coordinates not added to update. Received coordinates:', coordinates);
+      console.log('Coordinates not added to update. Received coordinates:', parsedCoordinates);
     }
 
     const updatedProvider = await ServiceProvider.findByIdAndUpdate(
@@ -167,7 +227,7 @@ router.post('/services', [
   requireRole(['provider']),
   body('name').trim().isLength({ min: 2 }),
   body('description').trim().isLength({ min: 10 }),
-  body('category').isMongoId(),
+  body('categoryId').isMongoId(),
   body('price').isNumeric().isFloat({ min: 0 }),
   body('duration').isInt({ min: 1 })
 ], async (req, res) => {
@@ -189,16 +249,17 @@ router.post('/services', [
     const {
       name,
       description,
-      category,
+      categoryId,
       price,
       duration,
       maxBookingsPerDay,
       requirements,
-      tags
+      tags,
+      slots
     } = req.body;
 
     // Validate category
-    const categoryExists = await ServiceCategory.findById(category);
+    const categoryExists = await ServiceCategory.findById(categoryId);
     if (!categoryExists || !categoryExists.isActive) {
       return res.status(400).json({ error: 'Invalid category selected' });
     }
@@ -207,12 +268,13 @@ router.post('/services', [
       providerId: provider._id,
       name,
       description,
-      category,
+      category: categoryId,
       price,
       duration,
       maxBookingsPerDay,
       requirements,
-      tags
+      tags,
+      slots
     });
 
     await service.save();
@@ -241,7 +303,7 @@ router.put('/services/:serviceId', [
   requireRole(['provider']),
   body('name').optional().trim().isLength({ min: 2 }),
   body('description').optional().trim().isLength({ min: 10 }),
-  body('category').optional({ nullable: true }).isMongoId(),
+  body('categoryId').optional({ nullable: true }).isMongoId(),
   body('website').optional({ nullable: true }).isString(),
   body('price').optional().isNumeric().isFloat({ min: 0 }),
   body('duration').optional().isInt({ min: 1 })
@@ -271,16 +333,23 @@ router.put('/services/:serviceId', [
     }
 
     // Validate category if being updated
-    if (req.body.category) {
-      const categoryExists = await ServiceCategory.findById(req.body.category);
+    if (req.body.categoryId) {
+      const categoryExists = await ServiceCategory.findById(req.body.categoryId);
       if (!categoryExists || !categoryExists.isActive) {
         return res.status(400).json({ error: 'Invalid category selected' });
       }
     }
 
+    // Transform categoryId to category for the database
+    const updateData = { ...req.body };
+    if (updateData.categoryId) {
+      updateData.category = updateData.categoryId;
+      delete updateData.categoryId;
+    }
+
     const updatedService = await Service.findByIdAndUpdate(
       req.params.serviceId,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     ).populate('category', 'name description');
 

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Loader2 } from 'lucide-react';
+import { CalendarToday, AutorenewRounded } from '@mui/icons-material';
 
 const Register = () => {
   const [searchParams] = useSearchParams();
@@ -116,7 +116,7 @@ const Register = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-teal-600 rounded-xl flex items-center justify-center">
-              <Calendar className="w-7 h-7 text-white" />
+              <CalendarToday className="w-7 h-7 text-white" />
             </div>
           </div>
           <h1 className="text-2xl font-bold">Create your account</h1>
@@ -209,7 +209,7 @@ const Register = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <AutorenewRounded className="mr-2 h-4 w-4 animate-spin" />
                     Creating account...
                   </>
                 ) : (

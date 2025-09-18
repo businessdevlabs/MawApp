@@ -15,18 +15,18 @@ import {
   useDeleteUser, 
   useUpdateProviderStatus 
 } from '@/hooks/useAdmin';
-import { 
-  Edit, 
-  Ban, 
-  UserCheck, 
-  UserX, 
-  Trash2, 
-  Shield, 
-  AlertTriangle,
+import {
+  Edit,
+  Block,
+  VerifiedUser,
+  PersonOff,
+  Delete,
+  Shield,
+  Warning,
   CheckCircle,
-  XCircle,
-  Clock
-} from 'lucide-react';
+  Cancel,
+  Schedule
+} from '@mui/icons-material';
 
 interface User {
   _id: string;
@@ -187,9 +187,9 @@ const UserRoleManagement: React.FC<UserRoleManagementProps> = ({ user, provider,
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return <CheckCircle className="h-4 w-4" />;
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'rejected': return <XCircle className="h-4 w-4" />;
-      case 'suspended': return <Ban className="h-4 w-4" />;
+      case 'pending': return <Schedule className="h-4 w-4" />;
+      case 'rejected': return <Cancel className="h-4 w-4" />;
+      case 'suspended': return <Block className="h-4 w-4" />;
       default: return null;
     }
   };
@@ -214,13 +214,13 @@ const UserRoleManagement: React.FC<UserRoleManagementProps> = ({ user, provider,
               )}
               {currentUser.suspended && (
                 <Badge variant="destructive" className="flex items-center gap-1">
-                  <Ban className="h-3 w-3" />
+                  <Block className="h-3 w-3" />
                   Suspended
                 </Badge>
               )}
               {!currentUser.isActive && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  <UserX className="h-3 w-3" />
+                  <PersonOff className="h-3 w-3" />
                   Inactive
                 </Badge>
               )}
@@ -293,7 +293,7 @@ const UserRoleManagement: React.FC<UserRoleManagementProps> = ({ user, provider,
               <Dialog open={providerStatusDialogOpen} onOpenChange={setProviderStatusDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" onClick={() => setSelectedProviderStatus(provider.status)}>
-                    <UserCheck className="h-4 w-4 mr-1" />
+                    <VerifiedUser className="h-4 w-4 mr-1" />
                     Change Status
                   </Button>
                 </DialogTrigger>
@@ -355,7 +355,7 @@ const UserRoleManagement: React.FC<UserRoleManagementProps> = ({ user, provider,
                   variant={currentUser.suspended ? "default" : "outline"} 
                   size="sm"
                 >
-                  <Ban className="h-4 w-4 mr-1" />
+                  <Block className="h-4 w-4 mr-1" />
                   {currentUser.suspended ? 'Unsuspend' : 'Suspend'}
                 </Button>
               </DialogTrigger>
@@ -411,14 +411,14 @@ const UserRoleManagement: React.FC<UserRoleManagementProps> = ({ user, provider,
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-1" />
+                    <Delete className="h-4 w-4 mr-1" />
                     Deactivate
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      <Warning className="h-5 w-5 text-red-500" />
                       Deactivate User Account
                     </AlertDialogTitle>
                     <AlertDialogDescription>

@@ -2,27 +2,27 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  Calendar, 
-  Star, 
-  MapPin, 
-  Clock, 
-  Scissors, 
-  Dumbbell, 
-  Heart,
-  Users,
+import {
+  Search,
+  CalendarToday,
+  Star,
+  LocationOn,
+  Schedule,
+  ContentCut,
+  FitnessCenter,
+  Favorite,
+  Groups,
   CheckCircle,
-  ArrowRight
-} from 'lucide-react';
+  ArrowForward
+} from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 
 const Home = () => {
   const categories = [
-    { name: 'Beauty & Hair', icon: Scissors, count: '1,200+' },
-    { name: 'Fitness', icon: Dumbbell, count: '800+' },
-    { name: 'Wellness', icon: Heart, count: '600+' },
-    { name: 'Health', icon: Users, count: '400+' }
+    { name: 'Beauty & Hair', icon: ContentCut, count: '1,200+' },
+    { name: 'Fitness', icon: FitnessCenter, count: '800+' },
+    { name: 'Wellness', icon: Favorite, count: '600+' },
+    { name: 'Health', icon: Groups, count: '400+' }
   ];
 
   const features = [
@@ -32,7 +32,7 @@ const Home = () => {
       description: 'Find the perfect service provider based on your location, preferences, and budget.'
     },
     {
-      icon: Calendar,
+      icon: CalendarToday,
       title: 'Instant Booking',
       description: 'Book appointments 24/7 with real-time availability and instant confirmation.'
     },
@@ -51,31 +51,31 @@ const Home = () => {
   const topProviders = [
     {
       id: 1,
-      name: "Elite Hair Studio",
-      category: "Beauty & Hair",
+      name: "Dr. Sarah Johnson",
+      category: "Cardiology",
       rating: 4.9,
       reviews: 324,
-      image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300",
+      image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300",
       distance: "0.5 mi",
       nextAvailable: "Today"
     },
     {
       id: 2,
-      name: "FitZone Personal Training",
-      category: "Fitness",
+      name: "Dr. Michael Chen",
+      category: "Dermatology",
       rating: 4.8,
       reviews: 189,
-      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300",
+      image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300",
       distance: "1.2 mi",
       nextAvailable: "Tomorrow"
     },
     {
       id: 3,
-      name: "Serenity Wellness Spa",
-      category: "Wellness",
+      name: "Dr. Emily Rodriguez",
+      category: "Pediatrics",
       rating: 4.9,
       reviews: 267,
-      image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=300",
+      image: "https://images.unsplash.com/photo-1594824475198-61b1ddbdc0dc?w=300",
       distance: "0.8 mi",
       nextAvailable: "Today"
     }
@@ -96,7 +96,7 @@ const Home = () => {
             <Link to="/services">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3">
                 Explore Services
-                <ArrowRight className="ml-2 w-5 h-5" />
+                <ArrowForward className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link to="/register?role=provider">
@@ -108,23 +108,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Popular Categories</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {categories.map((category, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <category.icon className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">{category.name}</h3>
-                  <p className="text-gray-600">{category.count} providers</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Features */}
       <section className="py-16 bg-gray-50">
@@ -148,7 +131,7 @@ const Home = () => {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-12">
-            <h2 className="text-3xl font-bold">Top-Rated Providers</h2>
+            <h2 className="text-3xl font-bold">Top-Rated Doctors</h2>
             <Link to="/services">
               <Button variant="outline">View All</Button>
             </Link>
@@ -177,11 +160,11 @@ const Home = () => {
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
                     <div className="flex items-center">
-                      <MapPin className="w-4 h-4 mr-1" />
+                      <LocationOn className="w-4 h-4 mr-1" />
                       {provider.distance}
                     </div>
                     <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
+                      <Schedule className="w-4 h-4 mr-1" />
                       {provider.nextAvailable}
                     </div>
                   </div>

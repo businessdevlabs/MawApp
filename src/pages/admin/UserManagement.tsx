@@ -9,7 +9,7 @@ import { useAdminUsers, useAdminProviders } from '@/hooks/useAdmin';
 import UserRoleManagement from '@/components/admin/UserRoleManagement';
 
 import { useToast } from '@/hooks/use-toast';
-import { Search } from 'lucide-react';
+import { Search } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 
 const UserManagement = () => {

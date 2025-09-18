@@ -2,6 +2,9 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+// Load environment variables first
+dotenv.config();
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,6 +14,7 @@ import authRoutes from './routes/auth.js';
 import providerRoutes from './routes/provider.js';
 import providersRoutes from './routes/providers.js';
 import categoriesRoutes from './routes/categories.js';
+import subcategoriesRoutes from './routes/subcategories.js';
 import servicesRoutes from './routes/services.js';
 import bookingRoutes from './routes/bookings.js';
 import adminRoutes from './routes/admin.js';
@@ -41,6 +45,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Serve static files from the React app with proper MIME types and cache control
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: 0, // Disable caching for now to force fresh assets
@@ -62,6 +69,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/provider', providerRoutes);
 app.use('/api/providers', providersRoutes);
 app.use('/api/categories', categoriesRoutes);
+app.use('/api/subcategories', subcategoriesRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);

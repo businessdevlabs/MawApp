@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAdminStats, useAdminRecentBookings, useAdminProviders } from '@/hooks/useAdmin';
-import { Users, Store, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Groups, Store, CalendarToday, AttachMoney, TrendingUp, Warning, CheckCircle, Schedule } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
                     <p className="text-sm text-gray-600">Total Clients</p>
                     <p className="text-2xl font-bold">{stats?.totalClients || 0}</p>
                   </div>
-                  <Users className="h-8 w-8 text-blue-600" />
+                  <Groups className="h-8 w-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
@@ -78,7 +78,7 @@ const AdminDashboard = () => {
                     <p className="text-sm text-gray-600">Total Bookings</p>
                     <p className="text-2xl font-bold">{stats?.totalBookings || 0}</p>
                   </div>
-                  <Calendar className="h-8 w-8 text-purple-600" />
+                  <CalendarToday className="h-8 w-8 text-purple-600" />
                 </div>
               </CardContent>
             </Card>
@@ -90,7 +90,7 @@ const AdminDashboard = () => {
                     <p className="text-sm text-gray-600">Total Revenue</p>
                     <p className="text-2xl font-bold">${stats?.totalRevenue?.toFixed(2) || '0.00'}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-yellow-600" />
+                  <AttachMoney className="h-8 w-8 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
@@ -102,7 +102,7 @@ const AdminDashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="h-6 w-6 text-orange-600" />
+                    <Warning className="h-6 w-6 text-orange-600" />
                     <div>
                       <p className="font-semibold text-orange-900">Pending Provider Approvals</p>
                       <p className="text-sm text-orange-700">
@@ -124,7 +124,7 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
+                  <Schedule className="h-5 w-5" />
                   Recent Bookings
                 </CardTitle>
               </CardHeader>
@@ -161,7 +161,7 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
+                  <Warning className="h-5 w-5" />
                   Pending Applications
                 </CardTitle>
               </CardHeader>
@@ -199,7 +199,7 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button asChild variant="outline" className="h-16">
                   <Link to="/admin/users" className="flex flex-col items-center gap-2">
-                    <Users className="h-6 w-6" />
+                    <Groups className="h-6 w-6" />
                     Manage Users
                   </Link>
                 </Button>

@@ -47,6 +47,10 @@ const serviceSchema = new mongoose.Schema({
   tags: [{
     type: String,
     trim: true
+  }],
+  slots: [{
+    type: String,
+    trim: true
   }]
 }, {
   timestamps: true

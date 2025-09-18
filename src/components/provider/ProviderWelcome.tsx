@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Calendar, Clock, User, ArrowRight } from 'lucide-react';
+import { Store, CalendarToday, Schedule, Person, ArrowForward } from '@mui/icons-material';
 
 interface ProviderWelcomeProps {
   providerName?: string;
@@ -25,14 +25,14 @@ const ProviderWelcome = ({
       description: "Add your business information, contact details, and description",
       completed: hasProfile,
       link: "/provider/profile",
-      icon: User
+      icon: Person
     },
     {
       title: "Set Your Schedule",
       description: "Define your working hours and availability",
       completed: hasSchedule,
       link: "/provider/schedule", 
-      icon: Clock
+      icon: Schedule
     },
     {
       title: "Add Your Services",
@@ -60,30 +60,30 @@ const ProviderWelcome = ({
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Setup Progress</span>
-            <Badge variant={isSetupComplete ? "default" : "secondary"}>
+      <Card className="shadow-sm border-0 overflow-hidden">
+        <div className="px-6 py-4 text-white" style={{backgroundColor: '#025bae'}}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Setup Progress</h2>
+            <Badge className={`${isSetupComplete ? 'bg-green-500/20 text-green-100 border-green-400/30' : 'bg-white/20 text-white border-white/30'}`}>
               {completedSteps}/{setupSteps.length} Complete
             </Badge>
-          </CardTitle>
-        </CardHeader>
+          </div>
+        </div>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             {setupSteps.map((step, index) => {
               const Icon = step.icon;
               return (
                 <div 
                   key={index}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
-                    step.completed ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                  }`}
+                  className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
+                    step.completed ? 'bg-green-50 border-l-green-500 border-green-200' : 'bg-gray-50 border-l-gray-300 border-gray-200'
+                  } hover:shadow-sm transition-shadow`}
                 >
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      step.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
-                    }`}>
+                      step.completed ? 'bg-green-100 text-green-600' : 'text-white'
+                    }`} style={!step.completed ? {backgroundColor: '#025bae'} : {}}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
@@ -97,10 +97,10 @@ const ProviderWelcome = ({
                         Complete
                       </Badge>
                     ) : (
-                      <Button asChild size="sm">
+                      <Button asChild size="sm" style={{backgroundColor: '#025bae'}} className="hover:bg-blue-700">
                         <Link to={step.link} className="flex items-center">
                           Setup
-                          <ArrowRight className="w-4 h-4 ml-1" />
+                          <ArrowForward className="w-4 h-4 ml-1" />
                         </Link>
                       </Button>
                     )}
@@ -113,33 +113,33 @@ const ProviderWelcome = ({
       </Card>
 
       {isSetupComplete && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="w-5 h-5 mr-2" />
+        <Card className="shadow-sm border-0 overflow-hidden">
+          <div className="px-6 py-4 text-white" style={{backgroundColor: '#025bae'}}>
+            <h2 className="text-lg font-semibold flex items-center">
+              <CalendarToday className="w-5 h-5 mr-2" />
               Quick Actions
-            </CardTitle>
-          </CardHeader>
+            </h2>
+          </div>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button asChild variant="outline" className="h-auto p-4">
+              <Button asChild variant="outline" className="h-auto p-4 border-2 hover:border-blue-600 hover:bg-blue-50">
                 <Link to="/provider/bookings" className="flex flex-col items-center text-center">
-                  <Calendar className="w-6 h-6 mb-2" />
-                  <span className="font-medium">View Appointments</span>
+                  <CalendarToday className="w-6 h-6 mb-2" style={{color: '#025bae'}} />
+                  <span className="font-medium" style={{color: '#025bae'}}>View Appointments</span>
                   <span className="text-sm text-gray-600">Manage your bookings</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto p-4">
+              <Button asChild variant="outline" className="h-auto p-4 border-2 hover:border-blue-600 hover:bg-blue-50">
                 <Link to="/provider/services" className="flex flex-col items-center text-center">
-                  <Store className="w-6 h-6 mb-2" />
-                  <span className="font-medium">Manage Services</span>
+                  <Store className="w-6 h-6 mb-2" style={{color: '#025bae'}} />
+                  <span className="font-medium" style={{color: '#025bae'}}>Manage Services</span>
                   <span className="text-sm text-gray-600">Add or edit services</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-auto p-4">
+              <Button asChild variant="outline" className="h-auto p-4 border-2 hover:border-blue-600 hover:bg-blue-50">
                 <Link to="/provider/schedule" className="flex flex-col items-center text-center">
-                  <Clock className="w-6 h-6 mb-2" />
-                  <span className="font-medium">Update Schedule</span>
+                  <Schedule className="w-6 h-6 mb-2" style={{color: '#025bae'}} />
+                  <span className="font-medium" style={{color: '#025bae'}}>Update Schedule</span>
                   <span className="text-sm text-gray-600">Modify availability</span>
                 </Link>
               </Button>

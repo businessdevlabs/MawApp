@@ -7,16 +7,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  CreditCard, 
-  Download, 
-  Calendar,
-  User,
-  Filter,
-  ArrowUpDown
-} from 'lucide-react';
+import {
+  AttachMoney,
+  TrendingUp,
+  CreditCard,
+  Download,
+  CalendarToday,
+  Person,
+  FilterList,
+  UnfoldMore
+} from '@mui/icons-material';
 
 interface Payment {
   _id: string;
@@ -92,7 +92,7 @@ const ProviderPayments = () => {
       case 'debit_card':
         return <CreditCard className="w-4 h-4" />;
       default:
-        return <DollarSign className="w-4 h-4" />;
+        return <AttachMoney className="w-4 h-4" />;
     }
   };
 
@@ -117,7 +117,7 @@ const ProviderPayments = () => {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 text-gray-500" />
+              <Person className="w-4 h-4 text-gray-500" />
               <h3 className="font-semibold">{payment.bookingId?.clientId?.fullName || 'Unknown Client'}</h3>
               <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'}>
                 {payment.status}
@@ -126,7 +126,7 @@ const ProviderPayments = () => {
             
             <div className="space-y-1 text-sm text-gray-600 mb-4">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+                <CalendarToday className="w-4 h-4" />
                 <span>
                   {format(new Date(payment.paymentDate), 'EEEE, MMMM do, yyyy')}
                 </span>
@@ -205,7 +205,7 @@ const ProviderPayments = () => {
                     <p className="text-sm text-gray-600">Total Revenue</p>
                     <p className="text-2xl font-bold text-green-600">${totalRevenue.toFixed(2)}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-green-600" />
+                  <AttachMoney className="h-8 w-8 text-green-600" />
                 </div>
               </CardContent>
             </Card>
@@ -251,7 +251,7 @@ const ProviderPayments = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
+                <FilterList className="h-5 w-5" />
                 Filters
               </CardTitle>
             </CardHeader>
@@ -311,9 +311,9 @@ const ProviderPayments = () => {
                       }}
                       className="flex items-center gap-1"
                     >
-                      <Calendar className="w-4 h-4" />
+                      <CalendarToday className="w-4 h-4" />
                       Date
-                      <ArrowUpDown className="w-3 h-3" />
+                      <UnfoldMore className="w-3 h-3" />
                     </Button>
                     <Button
                       variant={sortBy === 'amount' ? 'default' : 'outline'}
@@ -328,9 +328,9 @@ const ProviderPayments = () => {
                       }}
                       className="flex items-center gap-1"
                     >
-                      <DollarSign className="w-4 h-4" />
+                      <AttachMoney className="w-4 h-4" />
                       Amount
-                      <ArrowUpDown className="w-3 h-3" />
+                      <UnfoldMore className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>
@@ -346,7 +346,7 @@ const ProviderPayments = () => {
             <CardContent>
               {sortedPayments.length === 0 ? (
                 <div className="text-center py-8">
-                  <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <AttachMoney className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500 mb-4">No payments found</p>
                   <p className="text-sm text-gray-400">
                     Payments will appear here once you complete appointments

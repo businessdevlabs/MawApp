@@ -7,15 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  User, 
-  X, 
+import {
+  CalendarToday,
+  Schedule,
+  LocationOn,
+  Person,
+  Close,
   CheckCircle,
-  AlertCircle
-} from 'lucide-react';
+  Warning
+} from '@mui/icons-material';
 import { format, parseISO, isPast } from 'date-fns';
 
 const MyBookings = () => {
@@ -46,11 +46,11 @@ const MyBookings = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { variant: 'secondary' as const, icon: AlertCircle, color: 'text-yellow-600' },
+      pending: { variant: 'secondary' as const, icon: Warning, color: 'text-yellow-600' },
       confirmed: { variant: 'default' as const, icon: CheckCircle, color: 'text-green-600' },
       completed: { variant: 'outline' as const, icon: CheckCircle, color: 'text-blue-600' },
-      cancelled: { variant: 'destructive' as const, icon: X, color: 'text-red-600' },
-      no_show: { variant: 'destructive' as const, icon: X, color: 'text-red-600' },
+      cancelled: { variant: 'destructive' as const, icon: Close, color: 'text-red-600' },
+      no_show: { variant: 'destructive' as const, icon: Close, color: 'text-red-600' },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -128,7 +128,7 @@ const MyBookings = () => {
             {upcomingBookings.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <CalendarToday className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming appointments</h3>
                   <p className="text-gray-600">Book a service to see your appointments here.</p>
                 </CardContent>
@@ -142,7 +142,7 @@ const MyBookings = () => {
                         <div>
                           <h3 className="font-semibold text-lg">{booking.service?.name}</h3>
                           <div className="flex items-center gap-2 text-gray-600 mt-1">
-                            <User className="w-4 h-4" />
+                            <Person className="w-4 h-4" />
                             <span>{booking.provider?.business_name}</span>
                           </div>
                         </div>
@@ -152,17 +152,17 @@ const MyBookings = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <CalendarToday className="w-4 h-4 text-gray-500" />
                             <span>{format(parseISO(booking.appointment_date), 'EEEE, MMMM do, yyyy')}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-gray-500" />
+                            <Schedule className="w-4 h-4 text-gray-500" />
                             <span>{booking.appointment_time} ({booking.duration_minutes} min)</span>
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="w-4 h-4 text-gray-500" />
+                            <LocationOn className="w-4 h-4 text-gray-500" />
                             <span>{booking.provider?.business_address}</span>
                           </div>
                           <div className="text-sm font-medium">
@@ -187,7 +187,7 @@ const MyBookings = () => {
                             onClick={() => handleCancelBooking(booking.id)}
                             disabled={updateBooking.isPending}
                           >
-                            <X className="w-4 h-4 mr-2" />
+                            <Close className="w-4 h-4 mr-2" />
                             Cancel
                           </Button>
                         </div>
@@ -208,7 +208,7 @@ const MyBookings = () => {
             {pastBookings.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <Schedule className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No past appointments</h3>
                   <p className="text-gray-600">Your completed appointments will appear here.</p>
                 </CardContent>
@@ -222,7 +222,7 @@ const MyBookings = () => {
                         <div>
                           <h3 className="font-semibold">{booking.service?.name}</h3>
                           <div className="flex items-center gap-2 text-gray-600 mt-1">
-                            <User className="w-4 h-4" />
+                            <Person className="w-4 h-4" />
                             <span>{booking.provider?.business_name}</span>
                           </div>
                         </div>
@@ -232,11 +232,11 @@ const MyBookings = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <CalendarToday className="w-4 h-4 text-gray-500" />
                             <span>{format(parseISO(booking.appointment_date), 'EEEE, MMMM do, yyyy')}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-gray-500" />
+                            <Schedule className="w-4 h-4 text-gray-500" />
                             <span>{booking.appointment_time} ({booking.duration_minutes} min)</span>
                           </div>
                         </div>
