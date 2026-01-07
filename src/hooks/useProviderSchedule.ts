@@ -31,16 +31,25 @@ export const useProviderBlackouts = (providerId?: string) => {
   });
 };
 
+interface TimeSlot {
+  startTime: string;
+  endTime: string;
+}
+
+interface ScheduleData {
+  dayOfWeek: number;
+  isAvailable: boolean;
+  timeSlots?: TimeSlot[];
+  // Legacy fields for backward compatibility
+  startTime?: string;
+  endTime?: string;
+}
+
 export const useCreateSchedule = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (schedules: {
-      dayOfWeek: number;
-      isAvailable: boolean;
-      startTime: string;
-      endTime: string;
-    }[]) => apiService.updateProviderSchedule(schedules),
+    mutationFn: (schedules: ScheduleData[]) => apiService.updateProviderSchedule(schedules),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-schedule'] });
     },
@@ -51,12 +60,7 @@ export const useUpdateSchedule = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (schedules: {
-      dayOfWeek: number;
-      isAvailable: boolean;
-      startTime: string;
-      endTime: string;
-    }[]) => apiService.updateProviderSchedule(schedules),
+    mutationFn: (schedules: ScheduleData[]) => apiService.updateProviderSchedule(schedules),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provider-schedule'] });
     },

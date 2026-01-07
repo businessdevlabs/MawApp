@@ -1,0 +1,84 @@
+{
+  "common": {
+    "language": "Langue",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès"
+  },
+  "profile": {
+    "title": "Profil",
+    "personalInfo": "Informations Personnelles",
+    "businessInfo": "Informations Professionnelles",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "businessName": "Nom de l'Entreprise",
+    "businessDescription": "Description de l'Entreprise",
+    "businessAddress": "Adresse de l'Entreprise",
+    "schedule": "Horaire",
+    "mySchedule": "Mon Horaire",
+    "updateProfile": "Mettre à Jour le Profil",
+    "profileUpdated": "Profil mis à jour avec succès",
+    "profileUpdateError": "Échec de la mise à jour du profil"
+  },
+  "aiSchedule": {
+    "title": "Créateur d'Horaire IA",
+    "description": "Répondez à quelques questions sur votre travail et vos préférences pour générer un horaire de disponibilité optimal",
+    "enableAudio": "Activer l'Audio",
+    "audioOn": "Audio Activé",
+    "audioOff": "Audio Désactivé",
+    "aiSpeaking": "L'IA parle...",
+    "listening": "Écoute...",
+    "repeat": "Répéter",
+    "speak": "Parler",
+    "stop": "Arrêter",
+    "currentQuestion": "Question Actuelle",
+    "workHours": {
+      "label": "Quelles sont vos heures de travail habituelles ?",
+      "placeholder": "ex. : 9h00 - 17h00",
+      "help": "Cela nous aide à éviter de planifier pendant vos heures de travail",
+      "audioPrompt": "Veuillez me dire vos heures de travail habituelles. Par exemple, de 9h à 17h."
+    },
+    "workDays": {
+      "label": "Quels jours travaillez-vous habituellement ?",
+      "help": "Sélectionnez tous les jours où vous êtes habituellement occupé par le travail",
+      "audioPrompt": "Quels jours travaillez-vous habituellement ? Vous pouvez dire les jours comme lundi, mardi, mercredi."
+    },
+    "availabilityNotes": {
+      "label": "Avez-vous des notes spéciales sur votre disponibilité ou des contraintes ?",
+      "placeholder": "ex. : Je ne suis pas disponible les weekends, je préfère des créneaux plus longs, j'ai besoin d'une pause déjeuner entre 12h et 13h...",
+      "help": "Facultatif : Parlez-nous de vos préférences de planification spécifiques",
+      "audioPrompt": "Avez-vous des notes spéciales sur votre disponibilité ou des contraintes de planification ? C'est facultatif, vous pouvez dire passer si vous n'en avez pas."
+    },
+    "generateSchedule": "Générer un Horaire IA",
+    "generatingSchedule": "Génération de l'Horaire...",
+    "missingInfo": "Informations Manquantes",
+    "missingInfoDesc": "Veuillez remplir les heures de travail et les jours de travail pour générer votre horaire.",
+    "generatedTitle": "Horaire Généré par l'IA",
+    "optimizedBadge": "Optimisé pour Vous",
+    "slots": "créneaux",
+    "applySchedule": "Appliquer et Enregistrer l'Horaire",
+    "regenerate": "Régénérer",
+    "smartComplete": "Horaire Intelligent Terminé",
+    "smartCompleteDesc": "Cet horaire a été créé en fonction de vos heures de travail, préférences et contraintes de disponibilité. Cliquez sur 'Appliquer et Enregistrer l'Horaire' pour l'enregistrer dans votre profil.",
+    "generationSuccess": "Horaire IA Généré",
+    "generationSuccessDesc": "Votre horaire de disponibilité personnalisé a été créé !",
+    "generationError": "Échec de la Génération de l'Horaire",
+    "microphoneError": "Accès au Microphone Requis",
+    "microphoneErrorDesc": "Veuillez autoriser l'accès au microphone pour utiliser l'entrée vocale."
+  },
+  "days": {
+    "monday": "Lundi",
+    "tuesday": "Mardi", 
+    "wednesday": "Mercredi",
+    "thursday": "Jeudi",
+    "friday": "Vendredi",
+    "saturday": "Samedi",
+    "sunday": "Dimanche"
+  }
+}

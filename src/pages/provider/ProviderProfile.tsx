@@ -306,7 +306,7 @@ const ProviderProfile = () => {
           {/* Profile Card */}
           <Card className="shadow-lg border-0 overflow-hidden rounded-xl">
             {/* Colored Header */}
-            <div className="bg-blue-500 px-8 py-6 text-white">
+            <div className="px-8 py-6 text-white" style={{backgroundColor: '#025bae'}}>
               <div className="flex items-center justify-center text-center">
                 <div className="flex flex-col items-center gap-3">
                   {/* Profile Photo Section */}
@@ -349,15 +349,15 @@ const ProviderProfile = () => {
                       className="hidden"
                     />
                     {/* Remove Photo Button */}
-                    {(photoPreview || provider?.profilePhoto) && (
+                    {/* {(photoPreview || provider?.profilePhoto) && (
                       <button
                         type="button"
                         onClick={handleRemovePhoto}
                         className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors shadow-lg"
                       >
-                        <Close className="w-2.5 h-2.5" />
+                        <Close className="w-0.5 h-0.5" />
                       </button>
-                    )}
+                    )} */}
                   </div>
                   <div>
                     <h2 className="text-2xl font-semibold">Business Information</h2>

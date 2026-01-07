@@ -31,6 +31,7 @@ const Header = () => {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isProvider = profile?.role === 'provider';
   const isAdmin = profile?.role === 'admin';
+  const isClient = profile?.role === 'client' || (!profile?.role && user);
 
   // Get profile photo - prioritize provider profile photo for providers
   const getProfilePhoto = () => {
@@ -71,7 +72,7 @@ const Header = () => {
             className="flex items-center"
           >
             <img src="/logo3.png" alt="Mawaad Logo" className="w-16 h-16" />
-            <span className="font-bold text-gray-900" style={{fontFamily: 'Inter, sans-serif', fontSize: '28px'}}>Mawaad</span>
+            <span className="font-bold text-gray-900" style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif', fontSize: '28px'}}>Mawaad</span>
           </Link>
 
           {/* Navigation */}
@@ -125,6 +126,11 @@ const Header = () => {
                         My Bookings
                       </Link>
                     )}
+                    {user && isClient && (
+                      <Link to="/profile" className={getLinkClasses("/profile")} style={getLinkStyle("/profile")}>
+                        Profile
+                      </Link>
+                    )}
                     {user && (
                       <Link to={isProvider ? "/provider/dashboard" : "/dashboard"} className={getLinkClasses(isProvider ? "/provider/dashboard" : "/dashboard")} style={getLinkStyle(isProvider ? "/provider/dashboard" : "/dashboard")}>
                         Dashboard
@@ -145,13 +151,7 @@ const Header = () => {
               </div>
             ) : user ? (
               <div className="flex items-center space-x-3">
-                {/* Business status pill for providers */}
-                {isProvider && (
-                  <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full border border-blue-200">
-                    Business
-                  </div>
-                )}
-
+                
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-12 w-12 rounded-full hover:bg-gray-100 transition-colors">
@@ -239,6 +239,14 @@ const Header = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Business status pill for providers */}
+                {isProvider && (
+                  <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full border border-blue-200">
+                    Business
+                  </div>
+                )}
+
               </div>
             ) : (
               <div className="flex items-center space-x-2">

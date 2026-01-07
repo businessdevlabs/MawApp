@@ -144,8 +144,8 @@ export const useRecentActivity = () => {
           id: booking._id,
           type: booking.status === 'completed' ? 'booking' : 
                 booking.status === 'cancelled' ? 'booking' : 'booking',
-          message: `${booking.status === 'completed' ? 'Completed' : 
-                     booking.status === 'cancelled' ? 'Cancelled' : 'Booked'} ${booking.serviceId?.name} ${booking.clientId?.fullName ? `with ${booking.clientId.fullName}` : booking.providerId?.businessName ? `at ${booking.providerId.businessName}` : ''}`,
+          message: `${booking.status === 'completed' ? 'Completed' :
+                     booking.status === 'cancelled' ? 'Cancelled' : 'Booked'} ${booking.serviceId?.name} ${booking.providerId?.businessName ? `with ${booking.providerId.businessName}` : ''}`,
           timeAgo: getTimeAgo(new Date(booking.createdAt))
         }));
       } catch (error) {

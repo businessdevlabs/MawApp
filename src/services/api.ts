@@ -6,6 +6,7 @@ export interface User {
   fullName: string;
   role: 'client' | 'provider' | 'admin';
   phone?: string;
+  address?: string;
   avatarUrl?: string;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +29,7 @@ export interface RegisterData {
   fullName: string;
   role: 'client' | 'provider' | 'admin';
   phone?: string;
+  address?: string;
 }
 
 export interface ServiceCategory {

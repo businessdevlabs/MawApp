@@ -14,13 +14,16 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AIServiceCreator from '@/components/provider/AIServiceCreator';
 import {
   Add,
   Edit,
   AttachMoney,
   Schedule,
   LocalOffer,
-  Delete
+  Delete,
+  AutoAwesome
 } from '@mui/icons-material';
 
 const DAYS_OF_WEEK = [
@@ -91,6 +94,7 @@ const ProviderServices = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [createTab, setCreateTab] = useState('manual');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -168,6 +172,68 @@ const ProviderServices = () => {
       slots: {},
     });
     setFormErrors({});
+    setCreateTab('manual');
+  };
+
+  const handleOpenCreateDialog = () => {
+    resetForm();
+    setIsCreateDialogOpen(true);
+  };
+
+  interface GeneratedService {
+    name: string;
+    description: string;
+    price: number;
+    duration: number;
+    categoryId: string;
+    maxBookingsPerDay: number;
+    requirements: string[];
+    tags: string[];
+    slots?: string[];
+  }
+
+  const handleAIServiceGenerated = (generatedService: GeneratedService) => {
+    // Find the most appropriate category based on the generated service
+    let selectedCategoryId = '';
+    if (generatedService.categoryId === 'auto' && categories.length > 0) {
+      // Try to match category by service name or description
+      const serviceLower = generatedService.name.toLowerCase() + ' ' + generatedService.description.toLowerCase();
+      
+      const categoryMatch = categories.find(cat => 
+        serviceLower.includes(cat.name.toLowerCase())
+      );
+      
+      selectedCategoryId = categoryMatch?._id || categories[0]._id;
+    } else {
+      selectedCategoryId = generatedService.categoryId;
+    }
+
+    // Parse slots if they exist
+    let parsedSlots: ServiceSlots = {};
+    if (generatedService.slots && generatedService.slots.length > 0) {
+      parsedSlots = parseServiceSlotsToServiceSlots(generatedService.slots);
+    }
+
+    // Update form data with AI-generated service
+    setFormData({
+      name: generatedService.name,
+      description: generatedService.description,
+      price: generatedService.price.toString(),
+      duration: generatedService.duration.toString(),
+      categoryId: selectedCategoryId,
+      maxBookingsPerDay: generatedService.maxBookingsPerDay.toString(),
+      requirements: generatedService.requirements?.join(', ') || '',
+      tags: generatedService.tags?.join(', ') || '',
+      slots: parsedSlots
+    });
+
+    // Switch to manual tab to show the form with pre-filled data
+    setCreateTab('manual');
+
+    toast({
+      title: "Service Ready",
+      description: "AI has pre-filled your service details. Review and adjust as needed.",
+    });
   };
 
   const validateForm = () => {
@@ -204,6 +270,23 @@ const ProviderServices = () => {
       errors.duration = 'Duration is required';
     } else if (parseInt(formData.duration) < 1) {
       errors.duration = 'Duration must be at least 1 minute';
+    }
+
+    // Slots validation - check for time conflicts and valid ranges
+    const slotsArray = convertServiceSlotsToArray(formData.slots);
+    if (slotsArray.length > 0) {
+      for (const slotString of slotsArray) {
+        try {
+          const slot = JSON.parse(slotString);
+          if (slot.startTime >= slot.endTime) {
+            errors.slots = 'End time must be after start time for all time slots';
+            break;
+          }
+        } catch (e) {
+          errors.slots = 'Invalid time slot format';
+          break;
+        }
+      }
     }
 
     setFormErrors(errors);
@@ -353,321 +436,382 @@ const ProviderServices = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">My Services</h1>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Add className="w-4 h-4 mr-2" />
-                  Add Service
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl [&>button]:text-white [&>button]:w-6 [&>button]:h-6 [&>button]:top-4 [&>button]:right-4" style={{borderRadius: 0, border: 'none'}}>
-                {/* Colored Header */}
-                <div className="-mx-6 -mt-6 px-6 py-4 text-white rounded-none" style={{backgroundColor: '#025bae'}}>
-                  <div className="flex items-center gap-3">
-                    <div className="bg-white/20 p-2 rounded-none">
-                      <Add className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold">Create New Service</h2>
-                      <p className="text-blue-100 text-sm">Add a new service to your offerings</p>
-                    </div>
+          {/* Header */}
+          <Card className="shadow-sm border-0 overflow-hidden">
+            <div className="px-6 py-4 text-white" style={{backgroundColor: '#025bae'}}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-2 rounded-full">
+                    <LocalOffer className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-semibold" style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif'}}>My Services</h1>
+                    <p className="text-white/80">Manage your service offerings</p>
                   </div>
                 </div>
-                <form onSubmit={handleCreateService} className="space-y-4 mt-6">
-                  <div>
-                    <Label htmlFor="name">Service Name <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      className={formErrors.name ? 'border-red-500' : ''}
-                    />
-                    {formErrors.name && (
-                      <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
-                      className={formErrors.description ? 'border-red-500' : ''}
-                      placeholder="Enter at least 10 characters"
-                    />
-                    {formErrors.description && (
-                      <p className="text-sm text-red-500 mt-1">{formErrors.description}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="price">Price ($) <span className="text-red-500">*</span></Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        required
-                        className={formErrors.price ? 'border-red-500' : ''}
-                      />
-                      {formErrors.price && (
-                        <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
-                      )}
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      onClick={handleOpenCreateDialog}
+                      className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                    >
+                      <Add className="w-4 h-4 mr-2" />
+                      Add Service
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:text-white [&>button]:w-6 [&>button]:h-6 [&>button]:top-4 [&>button]:right-4" style={{borderRadius: 0, border: 'none'}}>
+                    {/* Colored Header */}
+                    <div className="-mx-6 -mt-6 px-6 py-4 text-white rounded-none" style={{backgroundColor: '#025bae'}}>
+                      <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-none">
+                          <Add className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-semibold">Create New Service</h2>
+                          <p className="text-blue-100 text-sm">Add a new service to your offerings</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="duration">Duration (minutes) <span className="text-red-500">*</span></Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        min="1"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        required
-                        className={formErrors.duration ? 'border-red-500' : ''}
-                      />
-                      {formErrors.duration && (
-                        <p className="text-sm text-red-500 mt-1">{formErrors.duration}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
-                    <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
-                      <SelectTrigger className={formErrors.categoryId ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category._id} value={category._id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {formErrors.categoryId && (
-                      <p className="text-sm text-red-500 mt-1">{formErrors.categoryId}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="maxBookingsPerDay">Max Bookings/Day</Label>
-                      <Input
-                        id="maxBookingsPerDay"
-                        type="number"
-                        value={formData.maxBookingsPerDay}
-                        onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
-                        placeholder="10"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="requirements">Requirements (comma separated)</Label>
-                    <Input
-                      id="requirements"
-                      value={formData.requirements}
-                      onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-                      placeholder="Valid ID, Prior appointment"
-                    />
-                  </div>
-                  <div>
-                    <Label>Service Availability</Label>
-                    <div className="mt-2 space-y-3 max-h-60 overflow-y-auto border rounded-md p-4">
-                      {availableDays.length > 0 ? (
-                        availableDays.map((day) => (
-                          <div key={day.dayOfWeek} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="font-medium text-sm">{day.dayLabel}</Label>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAddTimeRange(day.dayOfWeek)}
-                                className="h-7 px-2 text-xs"
-                              >
-                                + Add Time
-                              </Button>
-                            </div>
-                            <div className="space-y-2 pl-4">
-                              {(formData.slots[day.dayOfWeek] || []).map((range, index) => (
-                                <div key={index} className="flex items-center space-x-2">
-                                  <Input
-                                    type="time"
-                                    value={range.startTime}
-                                    onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'startTime', e.target.value)}
-                                    min={day.minTime}
-                                    max={day.maxTime}
-                                    className="w-32 h-8 text-xs"
-                                  />
-                                  <span className="text-gray-500 text-xs">to</span>
-                                  <Input
-                                    type="time"
-                                    value={range.endTime}
-                                    onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'endTime', e.target.value)}
-                                    min={day.minTime}
-                                    max={day.maxTime}
-                                    className="w-32 h-8 text-xs"
-                                  />
+                    
+                    <Tabs value={createTab} onValueChange={setCreateTab} className="w-full mt-6">
+                      <TabsList className="grid w-full grid-cols-2 bg-blue-500 border-0 rounded-lg p-1">
+                        <TabsTrigger
+                          value="manual"
+                          className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium"
+                        >
+                          Manual Entry
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="ai"
+                          className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium flex items-center gap-1"
+                        >
+                          <AutoAwesome className="w-4 h-4" />
+                          AI Generator
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="manual" className="mt-6">
+                        <form onSubmit={handleCreateService} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Service Name <span className="text-red-500">*</span></Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                          className={formErrors.name ? 'border-red-500' : ''}
+                        />
+                        {formErrors.name && (
+                          <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
+                        <Textarea
+                          id="description"
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          rows={3}
+                          className={formErrors.description ? 'border-red-500' : ''}
+                          placeholder="Enter at least 10 characters"
+                        />
+                        {formErrors.description && (
+                          <p className="text-sm text-red-500 mt-1">{formErrors.description}</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="price">Price ($) <span className="text-red-500">*</span></Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                            required
+                            className={formErrors.price ? 'border-red-500' : ''}
+                          />
+                          {formErrors.price && (
+                            <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="duration">Duration (minutes) <span className="text-red-500">*</span></Label>
+                          <Input
+                            id="duration"
+                            type="number"
+                            min="1"
+                            value={formData.duration}
+                            onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                            required
+                            className={formErrors.duration ? 'border-red-500' : ''}
+                          />
+                          {formErrors.duration && (
+                            <p className="text-sm text-red-500 mt-1">{formErrors.duration}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="categoryId">Category <span className="text-red-500">*</span></Label>
+                        <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
+                          <SelectTrigger className={formErrors.categoryId ? 'border-red-500' : ''}>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category._id} value={category._id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {formErrors.categoryId && (
+                          <p className="text-sm text-red-500 mt-1">{formErrors.categoryId}</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="maxBookingsPerDay">Max Bookings/Day</Label>
+                          <Input
+                            id="maxBookingsPerDay"
+                            type="number"
+                            value={formData.maxBookingsPerDay}
+                            onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
+                            placeholder="10"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="requirements">Requirements (comma separated)</Label>
+                        <Input
+                          id="requirements"
+                          value={formData.requirements}
+                          onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
+                          placeholder="Valid ID, Prior appointment"
+                        />
+                      </div>
+                      <div>
+                        <Label>Service Availability</Label>
+                        <div className="mt-2 space-y-3 max-h-60 overflow-y-auto border rounded-md p-4">
+                          {availableDays.length > 0 ? (
+                            availableDays.map((day) => (
+                              <div key={day.dayOfWeek} className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label className="font-medium text-sm">{day.dayLabel}</Label>
                                   <Button
                                     type="button"
                                     size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleRemoveTimeRange(day.dayOfWeek, index)}
-                                    className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                                    variant="outline"
+                                    onClick={() => handleAddTimeRange(day.dayOfWeek)}
+                                    className="h-7 px-2 text-xs"
                                   >
-                                    ×
+                                    + Add Time
                                   </Button>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500">No available days. Please set up your schedule first.</p>
-                      )}
-                    </div>
-                  </div>
-                  {/* <div>
-                    <Label htmlFor="tags">Tags (comma separated)</Label>
-                    <Input
-                      id="tags"
-                      value={formData.tags}
-                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                      placeholder="professional, consultation"
+                                <div className="space-y-2 pl-4">
+                                  {(formData.slots[day.dayOfWeek] || []).map((range, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <Input
+                                        type="time"
+                                        value={range.startTime}
+                                        onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'startTime', e.target.value)}
+                                        className="w-32 h-8 text-xs"
+                                      />
+                                      <span className="text-gray-500 text-xs">to</span>
+                                      <Input
+                                        type="time"
+                                        value={range.endTime}
+                                        onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'endTime', e.target.value)}
+                                        className="w-32 h-8 text-xs"
+                                      />
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleRemoveTimeRange(day.dayOfWeek, index)}
+                                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                                      >
+                                        ×
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-500">No available days. Please set up your schedule first.</p>
+                          )}
+                        </div>
+                        {formErrors.slots && (
+                          <p className="text-sm text-red-500 mt-1">{formErrors.slots}</p>
+                        )}
+                      </div>
+                      {/* <div>
+                        <Label htmlFor="tags">Tags (comma separated)</Label>
+                        <Input
+                          id="tags"
+                          value={formData.tags}
+                          onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                          placeholder="professional, consultation"
+                        />
+                      </div> */}
+                      <div className="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createService.isPending} className="text-white" style={{backgroundColor: '#025bae'}}>
+                          {createService.isPending ? "Creating..." : "Create Service"}
+                        </Button>
+                      </div>
+                    </form>
+                  </TabsContent>
+
+                  <TabsContent value="ai" className="mt-6">
+                    <AIServiceCreator 
+                      onServiceGenerated={handleAIServiceGenerated}
+                      categories={categories}
+                      providerSchedule={providerSchedule}
                     />
-                  </div> */}
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createService.isPending}>
-                      {createService.isPending ? "Creating..." : "Create Service"}
-                    </Button>
-                  </div>
-                </form>
+                  </TabsContent>
+                </Tabs>
               </DialogContent>
-            </Dialog>
-          </div>
+                </Dialog>
+              </div>
+            </div>
+          </Card>
 
           {services.length === 0 ? (
-            <Card>
+            <Card className="shadow-sm border-0 overflow-hidden">
+              <div className="px-6 py-3 text-white" style={{backgroundColor: '#4a90e2'}}>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <LocalOffer className="w-5 h-5" />
+                  Service Management
+                </h2>
+                <p className="text-white/80 text-sm">Create and manage your services</p>
+              </div>
               <CardContent className="p-8 text-center">
                 <h3 className="text-lg font-semibold mb-2">No Services Yet</h3>
                 <p className="text-gray-600 mb-4">Create your first service to start accepting bookings.</p>
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Button onClick={handleOpenCreateDialog} className="text-white" style={{backgroundColor: '#025bae'}}>
                   <Add className="w-4 h-4 mr-2" />
                   Add Your First Service
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.map((service) => {
-                const getStatusColor = (isActive: boolean) => {
-                  return isActive ? '#025bae' : '#6b7280';
-                };
+            <Card className="shadow-sm border-0 overflow-hidden">
+              <div className="px-6 py-3 text-white" style={{backgroundColor: '#4a90e2'}}>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <LocalOffer className="w-5 h-5" />
+                  Your Services ({services.length})
+                </h2>
+              </div>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {services.map((service) => {
+                    const getStatusColor = (isActive: boolean) => {
+                      return isActive ? '#025bae' : '#6b7280';
+                    };
 
-                const getStatusBadge = (isActive: boolean) => {
-                  const badgeClass = isActive
-                    ? 'bg-green-50 text-green-700 border-green-200'
-                    : 'bg-gray-50 text-gray-700 border-gray-200';
+                    const getStatusBadge = (isActive: boolean) => {
+                      const badgeClass = isActive
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-gray-50 text-gray-700 border-gray-200';
 
-                  return (
-                    <Badge variant="outline" className={`font-medium ${badgeClass}`}>
-                      {isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  );
-                };
+                      return (
+                        <Badge variant="outline" className={`font-medium ${badgeClass}`}>
+                          {isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      );
+                    };
 
-                return (
-                  <Card key={service._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
-                    {/* Colored Header */}
-                    <div className="px-6 py-4 text-white" style={{backgroundColor: getStatusColor(service.isActive !== false)}}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-white/20 p-2 rounded-full">
-                            <LocalOffer className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-lg truncate">
-                              {service.name}
-                            </h3>
-                            <p className="text-white/80 text-sm truncate">
-                              {service.category?.name || 'No category'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex space-x-1 ml-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(service)}
-                            className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteService(service._id)}
-                            className="text-white hover:bg-red-500/20 h-8 w-8 p-0"
-                          >
-                            <Delete className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        {/* Description */}
-                        {service.description && (
-                          <p className="text-gray-600 text-sm leading-relaxed">
-                            {service.description}
-                          </p>
-                        )}
-
-                        {/* Price & Duration */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <AttachMoney style={{ fontSize: 16, color: '#025bae' }} />
-                            <div>
-                              <p className="text-lg font-semibold text-gray-900">${service.price}</p>
-                              <p className="text-xs text-gray-500">Price</p>
+                    return (
+                      <Card key={service._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
+                        {/* Colored Header */}
+                        <div className="px-6 py-4 text-white" style={{backgroundColor: getStatusColor(service.isActive !== false)}}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-white/20 p-2 rounded-full">
+                                <LocalOffer className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold text-lg truncate">
+                                  {service.name}
+                                </h3>
+                                <p className="text-white/80 text-sm truncate">
+                                  {service.category?.name || 'No category'}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Schedule style={{ fontSize: 16, color: '#025bae' }} />
-                            <div>
-                              <p className="text-lg font-semibold text-gray-900">{service.duration}</p>
-                              <p className="text-xs text-gray-500">minutes</p>
+                            <div className="flex space-x-1 ml-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(service)}
+                                className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteService(service._id)}
+                                className="text-white hover:bg-red-500/20 h-8 w-8 p-0"
+                              >
+                                <Delete className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
                         </div>
 
-                        {/* Status and Bookings */}
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                          {getStatusBadge(service.isActive !== false)}
-                          <span className="text-xs text-gray-500">
-                            Max {service.maxBookingsPerDay || 10}/day
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            {/* Description */}
+                            {service.description && (
+                              <p className="text-gray-600 text-sm leading-relaxed">
+                                {service.description}
+                              </p>
+                            )}
+
+                            {/* Price & Duration */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <AttachMoney style={{ fontSize: 16, color: '#025bae' }} />
+                                <div>
+                                  <p className="text-lg font-semibold text-gray-900">${service.price}</p>
+                                  <p className="text-xs text-gray-500">Price</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Schedule style={{ fontSize: 16, color: '#025bae' }} />
+                                <div>
+                                  <p className="text-lg font-semibold text-gray-900">{service.duration}</p>
+                                  <p className="text-xs text-gray-500">minutes</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Status and Bookings */}
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                              {getStatusBadge(service.isActive !== false)}
+                              <span className="text-xs text-gray-500">
+                                Max {service.maxBookingsPerDay || 10}/day
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Edit Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-2xl rounded-none sm:rounded-none [&>button]:text-white [&>button]:w-8 [&>button]:h-8 [&>button]:top-4 [&>button]:right-4 [&>button>svg]:w-6 [&>button>svg]:h-6">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-none sm:rounded-none [&>button]:text-white [&>button]:w-8 [&>button]:h-8 [&>button]:top-4 [&>button]:right-4 [&>button>svg]:w-6 [&>button>svg]:h-6">
               {/* Colored Header */}
               <div className="-mx-6 -mt-6 px-6 py-4 text-white" style={{backgroundColor: '#025bae', padding: '1.43rem'}}>
                 <div className="flex items-center gap-3">
@@ -742,7 +886,7 @@ const ProviderServices = () => {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="edit-category">Category <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="edit-categoryId">Category <span className="text-red-500">*</span></Label>
                   <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
                     <SelectTrigger className={formErrors.categoryId ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select a category" />
@@ -778,15 +922,6 @@ const ProviderServices = () => {
                     value={formData.requirements}
                     onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
                     placeholder="Valid ID, Prior appointment"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-tags">Tags (comma separated)</Label>
-                  <Input
-                    id="edit-tags"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    placeholder="professional, consultation"
                   />
                 </div>
                 <div>
@@ -846,20 +981,29 @@ const ProviderServices = () => {
                     )}
                   </div>
                 </div>
+                <div>
+                  <Label htmlFor="edit-tags">Tags (comma separated)</Label>
+                  <Input
+                    id="edit-tags"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="professional, consultation"
+                  />
+                </div>
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={updateService.isPending}>
+                  <Button type="submit" disabled={updateService.isPending} className="text-white" style={{backgroundColor: '#025bae'}}>
                     {updateService.isPending ? "Updating..." : "Update Service"}
                   </Button>
                 </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
-    </div>
   );
 };
 

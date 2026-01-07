@@ -260,7 +260,7 @@ const ProviderBookings = () => {
 
           <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="grid w-full grid-cols-6 bg-blue-500 border-0 rounded-lg p-1">
-              <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">All ({bookings.length})</TabsTrigger>
+              {/* <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">All ({bookings.length})</TabsTrigger> */}
               <TabsTrigger value="today" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Today ({filterBookings('today').length})</TabsTrigger>
               <TabsTrigger value="upcoming" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Upcoming ({filterBookings('upcoming').length})</TabsTrigger>
               <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 text-white/80 hover:text-white font-medium">Completed ({filterBookings('completed').length})</TabsTrigger>

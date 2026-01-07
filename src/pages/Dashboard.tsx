@@ -201,29 +201,26 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : recentActivity.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 mt-5">
                   {recentActivity.slice(0, 5).map((activity) => (
-                    <div key={activity.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-2 h-2 rounded-full ${
-                            activity.type === 'booking' ? 'bg-blue-600' :
-                            activity.type === 'payment' ? 'bg-green-600' :
-                            activity.type === 'review' ? 'bg-yellow-600' :
-                            'bg-gray-600'
-                          }`} style={{
-                            backgroundColor: activity.type === 'booking' ? '#025bae' :
-                            activity.type === 'payment' ? '#00b894' :
-                            activity.type === 'review' ? '#fdcb6e' :
-                            '#6c757d'
-                          }}></div>
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                            {activity.type}
-                          </span>
+                    <div key={activity.id} className="flex items-center justify-between p-3 border-l-4 bg-gray-50 hover:bg-gray-100 transition-colors" style={{borderLeftColor: '#025bae'}}>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full`} style={{
+                              backgroundColor: activity.type === 'booking' ? '#025bae' :
+                              activity.type === 'payment' ? '#00b894' :
+                              activity.type === 'review' ? '#fdcb6e' :
+                              '#6c757d'
+                            }}></div>
+                            <span className="text-xs font-medium uppercase tracking-wide" style={{color: '#025bae'}}>
+                              {activity.type}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500">{activity.timeAgo}</span>
                         </div>
-                        <span className="text-xs text-gray-500">{activity.timeAgo}</span>
+                        <p className="text-sm text-gray-900 leading-relaxed">{activity.message}</p>
                       </div>
-                      <p className="text-sm text-gray-900 leading-relaxed">{activity.message}</p>
                     </div>
                   ))}
                 </div>

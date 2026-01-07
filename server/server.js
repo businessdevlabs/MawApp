@@ -1,16 +1,22 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
 import dotenv from 'dotenv';
-
-// Load environment variables first
-dotenv.config();
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables FIRST before any other imports
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Debug: Check if environment variables are loaded
+console.log('DEBUG: Environment loaded. OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+
 import authRoutes from './routes/auth.js';
+import clientRoutes from './routes/client.js';
 import providerRoutes from './routes/provider.js';
 import providersRoutes from './routes/providers.js';
 import categoriesRoutes from './routes/categories.js';
@@ -18,9 +24,7 @@ import subcategoriesRoutes from './routes/subcategories.js';
 import servicesRoutes from './routes/services.js';
 import bookingRoutes from './routes/bookings.js';
 import adminRoutes from './routes/admin.js';
-
-// Load environment variables
-dotenv.config();
+import aiBookingRoutes from './routes/ai-booking.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -66,6 +70,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/client', clientRoutes);
 app.use('/api/provider', providerRoutes);
 app.use('/api/providers', providersRoutes);
 app.use('/api/categories', categoriesRoutes);
@@ -73,6 +78,7 @@ app.use('/api/subcategories', subcategoriesRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai-booking', aiBookingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

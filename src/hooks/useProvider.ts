@@ -43,10 +43,11 @@ interface ServiceUpdate {
   slots?: string[];
 }
 
-export const useProviderProfile = () => {
+export const useProviderProfile = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['providerProfile'],
     queryFn: () => apiService.getProviderProfile(),
+    enabled: enabled,
     retry: (failureCount, error: Error) => {
       // Don't retry if provider profile doesn't exist (404)
       if (error?.message?.includes('404')) {

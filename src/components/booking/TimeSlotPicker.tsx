@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,34 +17,82 @@ interface TimeSlotPickerProps {
   onDateSelect: (date: Date) => void;
   onTimeSelect: (time: string) => void;
   duration: number;
+  serviceSlots?: string[];
 }
 
-const TimeSlotPicker = ({ 
-  selectedDate, 
-  selectedTime, 
-  onDateSelect, 
+const TimeSlotPicker = ({
+  selectedDate,
+  selectedTime,
+  onDateSelect,
   onTimeSelect,
-  duration 
+  duration,
+  serviceSlots
 }: TimeSlotPickerProps) => {
-  // Generate time slots from 9 AM to 6 PM
+  // Check if a specific date has any available time slots
+  const hasAvailableSlots = (date: Date): boolean => {
+    if (!serviceSlots || serviceSlots.length === 0) {
+      return false; // No service slots configured, so no availability
+    }
+
+    const dayOfWeek = date.getDay();
+
+    // Check if there are any service slots for this day of the week
+    return serviceSlots.some(slotString => {
+      try {
+        const slotData = JSON.parse(slotString);
+        return slotData.dayOfWeek === dayOfWeek;
+      } catch (error) {
+        console.error('Error parsing slot data:', error);
+        return false;
+      }
+    });
+  };
+
+  // Parse service slots and generate available time slots
   const generateTimeSlots = (): TimeSlot[] => {
     const slots: TimeSlot[] = [];
     const startHour = 9;
     const endHour = 18;
-    
+
+    // Parse service slots to get available time ranges for the selected day
+    const availableTimeRanges: { startTime: string; endTime: string }[] = [];
+
+    if (serviceSlots && selectedDate) {
+      const selectedDayOfWeek = selectedDate.getDay();
+
+      serviceSlots.forEach(slotString => {
+        try {
+          const slotData = JSON.parse(slotString);
+          if (slotData.dayOfWeek === selectedDayOfWeek) {
+            availableTimeRanges.push({
+              startTime: slotData.startTime,
+              endTime: slotData.endTime
+            });
+          }
+        } catch (error) {
+          console.error('Error parsing slot data:', error);
+        }
+      });
+    }
+
+    // Generate all possible time slots (every 30 minutes)
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        // Simulate some unavailable slots for demo
-        const available = Math.random() > 0.3;
-        slots.push({ time, available });
+
+        // Check if this time falls within any available range
+        const isAvailable = availableTimeRanges.some(range => {
+          return time >= range.startTime && time < range.endTime;
+        });
+
+        slots.push({ time, available: isAvailable });
       }
     }
-    
+
     return slots;
   };
 
-  const timeSlots = generateTimeSlots();
+  const timeSlots = useMemo(() => generateTimeSlots(), [selectedDate, serviceSlots]);
   const today = startOfDay(new Date());
 
   return (
@@ -58,7 +106,7 @@ const TimeSlotPicker = ({
             mode="single"
             selected={selectedDate}
             onSelect={(date) => date && onDateSelect(date)}
-            disabled={(date) => isBefore(date, today)}
+            disabled={(date) => isBefore(date, today) || !hasAvailableSlots(date)}
             className="rounded-md border"
           />
         </CardContent>
@@ -97,23 +145,30 @@ const TimeSlotPicker = ({
             </div>
           )}
           
-          {selectedDate && (
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Available</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 bg-gray-300 rounded"></div>
-                <span>Unavailable</span>
-              </div>
-              {selectedTime && (
-                <Badge variant="secondary" className="mt-2">
-                  Duration: {duration} minutes
-                </Badge>
-              )}
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-3 h-3 bg-green-500 rounded"></div>
+              <span>Available time slots</span>
             </div>
-          )}
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-3 h-3 bg-gray-300 rounded"></div>
+              <span>Unavailable time slots</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-3 h-3 bg-gray-200 border border-gray-300 rounded"></div>
+              <span>Days with no service availability</span>
+            </div>
+            {selectedTime && (
+              <Badge variant="secondary" className="mt-2">
+                Duration: {duration} minutes
+              </Badge>
+            )}
+            {serviceSlots && serviceSlots.length === 0 && (
+              <div className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded">
+                No specific time slots configured for this service. Contact provider for availability.
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

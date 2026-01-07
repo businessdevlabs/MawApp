@@ -1,0 +1,84 @@
+{
+  "common": {
+    "language": "Language",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "profile": {
+    "title": "Profile",
+    "personalInfo": "Personal Information",
+    "businessInfo": "Business Information",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "businessName": "Business Name",
+    "businessDescription": "Business Description",
+    "businessAddress": "Business Address",
+    "schedule": "Schedule",
+    "mySchedule": "My Schedule",
+    "updateProfile": "Update Profile",
+    "profileUpdated": "Profile updated successfully",
+    "profileUpdateError": "Failed to update profile"
+  },
+  "aiSchedule": {
+    "title": "AI Schedule Creator",
+    "description": "Answer a few questions about your work and preferences to generate an optimal availability schedule",
+    "enableAudio": "Enable Audio",
+    "audioOn": "Audio On",
+    "audioOff": "Audio Off",
+    "aiSpeaking": "AI is speaking...",
+    "listening": "Listening...",
+    "repeat": "Repeat",
+    "speak": "Speak",
+    "stop": "Stop",
+    "currentQuestion": "Current Question",
+    "workHours": {
+      "label": "What are your typical work hours?",
+      "placeholder": "e.g., 9:00 AM - 5:00 PM",
+      "help": "This helps us avoid scheduling during your busy work time",
+      "audioPrompt": "Please tell me your typical work hours. For example, 9 AM to 5 PM."
+    },
+    "workDays": {
+      "label": "Which days do you typically work?",
+      "help": "Select all days when you're usually busy with work",
+      "audioPrompt": "Which days do you typically work? You can say the days like Monday, Tuesday, Wednesday."
+    },
+    "availabilityNotes": {
+      "label": "Any special availability notes or constraints?",
+      "placeholder": "e.g., I'm not available on weekends, I prefer longer blocks of time, I need time for lunch between 12-1 PM...",
+      "help": "Optional: Tell us about any specific scheduling preferences",
+      "audioPrompt": "Do you have any special availability notes or scheduling constraints? This is optional, you can say skip if you don't have any."
+    },
+    "generateSchedule": "Generate AI Schedule",
+    "generatingSchedule": "Generating Schedule...",
+    "missingInfo": "Missing Information",
+    "missingInfoDesc": "Please fill in work hours and work days to generate your schedule.",
+    "generatedTitle": "AI-Generated Schedule",
+    "optimizedBadge": "Optimized for You",
+    "slots": "slots",
+    "applySchedule": "Apply & Save Schedule",
+    "regenerate": "Regenerate",
+    "smartComplete": "Smart Schedule Complete",
+    "smartCompleteDesc": "This schedule was created based on your work hours, preferences, and availability constraints. Click 'Apply & Save Schedule' to save it to your profile.",
+    "generationSuccess": "AI Schedule Generated",
+    "generationSuccessDesc": "Your personalized availability schedule has been created!",
+    "generationError": "Schedule Generation Failed",
+    "microphoneError": "Microphone Access Required",
+    "microphoneErrorDesc": "Please allow microphone access to use voice input."
+  },
+  "days": {
+    "monday": "Monday",
+    "tuesday": "Tuesday", 
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  }
+}

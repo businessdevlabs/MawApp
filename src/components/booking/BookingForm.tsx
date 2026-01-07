@@ -19,6 +19,7 @@ interface Service {
   description: string;
   duration: number;
   price: number;
+  slots?: string[];
   providerId: {
     _id: string;
     businessName: string;
@@ -104,6 +105,7 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
           onDateSelect={setSelectedDate}
           onTimeSelect={setSelectedTime}
           duration={service.duration}
+          serviceSlots={service.slots}
         />
       </div>
 

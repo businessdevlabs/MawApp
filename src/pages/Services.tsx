@@ -148,6 +148,10 @@ const Services = () => {
                 variant={selectedCategory === category.id ? "default" : "outline"}
                 onClick={() => setSelectedCategory(category.id)}
                 className="flex items-center space-x-2"
+                style={selectedCategory === category.id ?
+                  {backgroundColor: '#025bae', borderColor: '#025bae'} :
+                  {borderColor: '#025bae', color: '#025bae'}
+                }
               >
                 <category.icon className="w-4 h-4" />
                 <span>{category.name}</span>
@@ -245,7 +249,7 @@ const Services = () => {
         {/* Load More */}
         {filteredServices.length > 0 && (
           <div className="text-center mt-12">
-            <Button variant="outline" size="lg">
+            <Button variant="outline" size="lg" style={{backgroundColor: '#025bae', color: 'white', borderColor: '#025bae'}} className="hover:opacity-90">
               Load More Services
             </Button>
           </div>

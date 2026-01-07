@@ -229,7 +229,14 @@ router.post('/services', [
   body('description').trim().isLength({ min: 10 }),
   body('categoryId').isMongoId(),
   body('price').isNumeric().isFloat({ min: 0 }),
-  body('duration').isInt({ min: 1 })
+  body('duration').isInt({ min: 1 }),
+  body('maxBookingsPerDay').optional().isInt({ min: 1 }),
+  body('requirements').optional().isArray(),
+  body('requirements.*').optional().isString().trim(),
+  body('tags').optional().isArray(),
+  body('tags.*').optional().isString().trim(),
+  body('slots').optional().isArray(),
+  body('slots.*').optional().isString()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -306,7 +313,15 @@ router.put('/services/:serviceId', [
   body('categoryId').optional({ nullable: true }).isMongoId(),
   body('website').optional({ nullable: true }).isString(),
   body('price').optional().isNumeric().isFloat({ min: 0 }),
-  body('duration').optional().isInt({ min: 1 })
+  body('duration').optional().isInt({ min: 1 }),
+  body('maxBookingsPerDay').optional().isInt({ min: 1 }),
+  body('requirements').optional().isArray(),
+  body('requirements.*').optional().isString().trim(),
+  body('tags').optional().isArray(),
+  body('tags.*').optional().isString().trim(),
+  body('slots').optional().isArray(),
+  body('slots.*').optional().isString(),
+  body('isActive').optional().isBoolean()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -421,16 +436,78 @@ router.post('/schedule', [
   requireRole(['provider']),
   body('schedules').isArray(),
   body('schedules.*.dayOfWeek').isInt({ min: 0, max: 6 }),
-  body('schedules.*.isAvailable').isBoolean(),
-  body('schedules.*.startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-  body('schedules.*.endTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+  body('schedules.*.isAvailable').isBoolean()
 ], async (req, res) => {
   try {
+    // Custom validation to handle both legacy and new formats
+    const scheduleValidationErrors = [];
+    const { schedules } = req.body;
+    
+    for (let i = 0; i < schedules.length; i++) {
+      const schedule = schedules[i];
+      const { isAvailable, startTime, endTime, timeSlots } = schedule;
+      
+      if (isAvailable) {
+        // Check if we have either legacy format or new format
+        const hasLegacyFormat = startTime && endTime;
+        const hasNewFormat = timeSlots && Array.isArray(timeSlots) && timeSlots.length > 0;
+        
+        if (!hasLegacyFormat && !hasNewFormat) {
+          scheduleValidationErrors.push({
+            msg: 'Available days must have either startTime/endTime or timeSlots',
+            path: `schedules[${i}]`,
+            location: 'body'
+          });
+        }
+        
+        // Validate legacy format if provided
+        if (hasLegacyFormat) {
+          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+          if (!timeRegex.test(startTime)) {
+            scheduleValidationErrors.push({
+              msg: 'Invalid startTime format. Use HH:MM (24-hour)',
+              path: `schedules[${i}].startTime`,
+              location: 'body'
+            });
+          }
+          if (!timeRegex.test(endTime)) {
+            scheduleValidationErrors.push({
+              msg: 'Invalid endTime format. Use HH:MM (24-hour)',
+              path: `schedules[${i}].endTime`,
+              location: 'body'
+            });
+          }
+        }
+        
+        // Validate new format if provided
+        if (hasNewFormat) {
+          timeSlots.forEach((slot, slotIndex) => {
+            const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (!slot.startTime || !timeRegex.test(slot.startTime)) {
+              scheduleValidationErrors.push({
+                msg: 'Invalid slot startTime format. Use HH:MM (24-hour)',
+                path: `schedules[${i}].timeSlots[${slotIndex}].startTime`,
+                location: 'body'
+              });
+            }
+            if (!slot.endTime || !timeRegex.test(slot.endTime)) {
+              scheduleValidationErrors.push({
+                msg: 'Invalid slot endTime format. Use HH:MM (24-hour)',
+                path: `schedules[${i}].timeSlots[${slotIndex}].endTime`,
+                location: 'body'
+              });
+            }
+          });
+        }
+      }
+    }
+    
+    // Check basic validation errors
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    if (!errors.isEmpty() || scheduleValidationErrors.length > 0) {
       return res.status(400).json({ 
         error: 'Validation failed', 
-        details: errors.array() 
+        details: [...errors.array(), ...scheduleValidationErrors]
       });
     }
 
@@ -440,28 +517,65 @@ router.post('/schedule', [
       return res.status(404).json({ error: 'Provider profile not found' });
     }
 
-    const { schedules } = req.body;
     const savedSchedules = [];
 
     for (const scheduleData of schedules) {
-      const { dayOfWeek, isAvailable, startTime, endTime } = scheduleData;
+      const { dayOfWeek, isAvailable, startTime, endTime, timeSlots } = scheduleData;
 
-      // Validate that end time is after start time
-      if (isAvailable && startTime >= endTime) {
-        return res.status(400).json({ 
-          error: `End time must be after start time for day ${dayOfWeek}` 
-        });
+      // Determine which format is being used
+      let finalTimeSlots = [];
+      
+      if (timeSlots && timeSlots.length > 0) {
+        // New multiple slots format
+        finalTimeSlots = timeSlots;
+        
+        // Validate each time slot format and logic
+        for (const slot of timeSlots) {
+          // Validate time format
+          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+          if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
+            return res.status(400).json({ 
+              error: `Invalid time format for day ${dayOfWeek}. Use HH:MM format (24-hour)` 
+            });
+          }
+          
+          // Validate time logic
+          if (slot.startTime >= slot.endTime) {
+            return res.status(400).json({ 
+              error: `End time must be after start time for day ${dayOfWeek} (${slot.startTime} - ${slot.endTime})` 
+            });
+          }
+        }
+      } else if (isAvailable && startTime && endTime) {
+        // Legacy single slot format
+        if (startTime >= endTime) {
+          return res.status(400).json({ 
+            error: `End time must be after start time for day ${dayOfWeek}` 
+          });
+        }
+        
+        finalTimeSlots = [{
+          startTime,
+          endTime
+        }];
+      }
+
+      const updateData = {
+        providerId: provider._id,
+        dayOfWeek,
+        isAvailable,
+        timeSlots: finalTimeSlots
+      };
+
+      // Keep legacy fields for backward compatibility
+      if (startTime && endTime) {
+        updateData.startTime = startTime;
+        updateData.endTime = endTime;
       }
 
       const schedule = await ProviderSchedule.findOneAndUpdate(
         { providerId: provider._id, dayOfWeek },
-        {
-          providerId: provider._id,
-          dayOfWeek,
-          isAvailable,
-          startTime,
-          endTime
-        },
+        updateData,
         { 
           new: true, 
           upsert: true, 

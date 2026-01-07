@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BookingForm from '@/components/booking/BookingForm';
-import { Schedule, Star, LocationOn, Close } from '@mui/icons-material';
+import AIBookingSection from '@/components/booking/AIBookingSection';
+import { Schedule, Star, LocationOn, Close, SmartToy, Person } from '@mui/icons-material';
 
 interface Service {
   _id: string;
@@ -12,6 +14,7 @@ interface Service {
   description: string;
   duration: number;
   price: number;
+  slots?: string[];
   category?: {
     name: string;
   };
@@ -118,14 +121,33 @@ const ServiceDetailModal = ({ service, isOpen, onClose }: ServiceDetailModalProp
             </CardContent>
           </Card>
 
-          {/* Booking Section */}
+          {/* Booking Section with Tabs */}
           <Card className="shadow-sm border-0 overflow-hidden">
-            {/* <div className="px-6 py-3 text-white" style={{backgroundColor: '#025bae'}}>
+            <div className="px-6 py-3 text-white" style={{backgroundColor: '#025bae'}}>
               <h2 className="text-lg font-semibold">Book Your Appointment</h2>
-              <p className="text-white/80 text-sm">Choose your preferred date and time</p>
-            </div> */}
+              <p className="text-white/80 text-sm">Choose your booking method</p>
+            </div>
             <CardContent className="p-6">
-              <BookingForm service={service} onSuccess={onClose} />
+              <Tabs defaultValue="ai" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="ai" className="flex items-center gap-2">
+                    <SmartToy className="w-4 h-4" />
+                    AI Smart Booking
+                  </TabsTrigger>
+                  <TabsTrigger value="manual" className="flex items-center gap-2">
+                    <Person className="w-4 h-4" />
+                    Manual Booking
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="ai" className="space-y-4">
+                  <AIBookingSection service={service} onBookingSuccess={onClose} />
+                </TabsContent>
+
+                <TabsContent value="manual" className="space-y-4">
+                  <BookingForm service={service} onSuccess={onClose} />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

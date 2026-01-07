@@ -10,6 +10,12 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ error: 'Access token required' });
     }
 
+    // Debug logging for token issues
+    if (token === 'undefined' || token === 'null' || token.length < 10) {
+      console.log('Invalid token received:', { token, authHeader });
+      return res.status(401).json({ error: 'Malformed access token' });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId);
 
@@ -21,6 +27,7 @@ const authenticateToken = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
+    console.error('Token that caused error:', req.headers.authorization);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

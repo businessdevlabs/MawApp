@@ -174,7 +174,7 @@ const ProviderDashboard = () => {
                       YOUR SERVICES <Badge variant="secondary" className="ml-2 bg-white/20 text-white border-white/30" style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif', fontWeight: 600}}>{services.length}</Badge>
                     </CardTitle>
                     <Button asChild size="sm" className="bg-white text-indigo-700 hover:bg-gray-100 font-bold">
-                      <Link to="/provider/services" className="flex items-center">
+                      <Link to="/provider/services" className="flex items-center" style={{textTransform: 'none', textDecoration: 'none', color: '#025bae'}}>
                         Manage Services
                         <MdArrowForward className="ml-1" style={{ fontSize: 16 }} />
                       </Link>
@@ -280,31 +280,35 @@ const ProviderDashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {bookings.slice(0, 5).map((booking: any) => (
-                        <div key={booking._id} className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border-l-4 border-l-orange-400 hover:shadow-md transition-shadow">
-                          <div>
-                            <p className="font-bold text-gray-900">{booking.clientId?.fullName || 'Unknown Client'}</p>
-                            <p className="text-sm font-medium text-gray-600">
-                              {format(new Date(booking.appointmentDate), 'MMM d, yyyy')}
-                            </p>
+                    {bookings.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8 font-medium">No recent activity</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookings.slice(0, 5).map((booking: any) => (
+                          <div key={booking._id} className="flex items-center justify-between p-3 border-l-4 bg-gray-50 hover:bg-gray-100 transition-colors" style={{borderLeftColor: '#025bae'}}>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#025bae'}}></div>
+                                  <span className="text-xs font-medium uppercase tracking-wide" style={{color: '#025bae'}}>
+                                    {booking.status === 'completed' ? 'Completed' :
+                                     booking.status === 'confirmed' ? 'Confirmed' :
+                                     booking.status === 'pending' ? 'New Booking' :
+                                     booking.status}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {format(new Date(booking.appointmentDate), 'MMM d')}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-900 leading-relaxed">
+                                <span className="font-medium">{booking.serviceId?.name || 'Service'}</span> with <span className="font-medium">{booking.clientId?.fullName || 'Unknown Client'}</span>
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-black text-lg text-gray-900">${booking.totalAmount}</p>
-                            <Badge
-                              variant={
-                                booking.status === 'completed' ? 'default' :
-                                booking.status === 'confirmed' ? 'secondary' :
-                                booking.status === 'pending' ? 'outline' : 'destructive'
-                              }
-                              className="font-bold"
-                            >
-                              {booking.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
