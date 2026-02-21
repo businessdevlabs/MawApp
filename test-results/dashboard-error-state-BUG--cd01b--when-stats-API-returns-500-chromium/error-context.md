@@ -1,0 +1,83 @@
+# Page snapshot
+
+```yaml
+- region "Notifications (F8)":
+  - list
+- banner:
+  - link "Mawaad Logo Mawaad":
+    - /url: /
+    - img "Mawaad Logo"
+    - text: Mawaad
+  - navigation:
+    - link "Services":
+      - /url: /services
+    - link "My Bookings":
+      - /url: /bookings
+    - link "Profile":
+      - /url: /profile
+    - link "Dashboard":
+      - /url: /dashboard
+  - button "B"
+- main:
+  - heading "Welcome back, BUG004 Client!" [level=1]
+  - paragraph: Your dashboard overview
+  - text: Client bug004-1771650656309@example.com
+  - heading "Upcoming Appointments" [level=2]
+  - paragraph: Your next appointments
+  - heading "Recent Activity" [level=2]
+  - paragraph: Latest updates and notifications
+- contentinfo:
+  - heading "BookEase" [level=3]
+  - paragraph: Your trusted platform for booking appointments with top-rated service providers.
+  - heading "For Clients" [level=4]
+  - list:
+    - listitem:
+      - link "Find Services":
+        - /url: "#"
+    - listitem:
+      - link "Book Appointments":
+        - /url: "#"
+    - listitem:
+      - link "My Bookings":
+        - /url: "#"
+    - listitem:
+      - link "Reviews":
+        - /url: "#"
+  - heading "For Providers" [level=4]
+  - list:
+    - listitem:
+      - link "Join as Provider":
+        - /url: "#"
+    - listitem:
+      - link "Provider Dashboard":
+        - /url: "#"
+    - listitem:
+      - link "Manage Services":
+        - /url: "#"
+    - listitem:
+      - link "Analytics":
+        - /url: "#"
+  - heading "Support" [level=4]
+  - list:
+    - listitem:
+      - link "Help Center":
+        - /url: "#"
+    - listitem:
+      - link "Contact Us":
+        - /url: "#"
+    - listitem:
+      - link "Privacy Policy":
+        - /url: "#"
+    - listitem:
+      - link "Terms of Service":
+        - /url: "#"
+  - paragraph: © 2024 BookEase. All rights reserved.
+  - link:
+    - /url: "#"
+  - link:
+    - /url: "#"
+  - link:
+    - /url: "#"
+  - link:
+    - /url: "#"
+```

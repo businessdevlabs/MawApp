@@ -15,6 +15,7 @@ interface Service {
   duration: number;
   price: number;
   slots?: string[];
+  imageUrl?: string;
   category?: {
     name: string;
   };
@@ -26,6 +27,8 @@ interface Service {
     averageRating?: number;
     totalReviews?: number;
     profilePhoto?: string;
+    businessImage?: string;
+    businessHours?: { [day: string]: { open: string; close: string; isOpen: boolean } };
   };
 }
 
@@ -48,6 +51,12 @@ const ServiceDetailModal = ({ service, isOpen, onClose }: ServiceDetailModalProp
         <div className="space-y-6">
           {/* Service Header Card */}
           <Card className="shadow-sm border-0 overflow-hidden rounded-t-lg">
+            {/* Business image banner */}
+            <img
+              src={service.providerId?.businessImage || '/placeholder.svg'}
+              alt={service.providerId?.businessName || 'Business'}
+              className="w-full max-h-40 object-cover"
+            />
             <div className="px-6 py-4 text-white" style={{backgroundColor: '#025bae'}}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -92,10 +101,16 @@ const ServiceDetailModal = ({ service, isOpen, onClose }: ServiceDetailModalProp
                   <span className="text-sm text-gray-900">{service.duration} minutes</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm text-gray-900">
-                    {service.providerId?.averageRating?.toFixed(1) || '4.8'} ({service.providerId?.totalReviews || 0})
-                  </span>
+                  {(service.providerId?.totalReviews ?? 0) > 0 ? (
+                    <>
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm text-gray-900">
+                        {service.providerId?.averageRating?.toFixed(1)} ({service.providerId?.totalReviews})
+                      </span>
+                    </>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">New</Badge>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2">
                   <LocationOn style={{ fontSize: 16, color: '#025bae' }} />
@@ -107,6 +122,17 @@ const ServiceDetailModal = ({ service, isOpen, onClose }: ServiceDetailModalProp
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-900 mb-2">About this service</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">{service.description}</p>
+                </div>
+              )}
+
+              {service.imageUrl && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Service photo</h3>
+                  <img
+                    src={service.imageUrl}
+                    alt={service.name}
+                    className="w-full max-h-48 object-cover rounded-lg"
+                  />
                 </div>
               )}
 

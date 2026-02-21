@@ -1,6 +1,6 @@
 # Multi-Agent Workspace — Zenith
 
-This directory contains the communication layer for 4 Claude Code agents working on this project.
+This directory contains the communication layer for 5 Claude Code agents working on this project.
 
 ## Team
 
@@ -10,6 +10,7 @@ This directory contains the communication layer for 4 Claude Code agents working
 | Senior Engineer 1 | Feature implementation | claude-sonnet-4-6 |
 | Senior Engineer 2 | Feature implementation | claude-sonnet-4-6 |
 | QA Engineer | Testing, bug reports, validation | claude-sonnet-4-6 |
+| Senior UI/UX Designer | UI audits, design specs, implementation review | claude-sonnet-4-6 |
 
 ---
 
@@ -21,16 +22,19 @@ agents/
     tech-lead.md        # Tech Lead role instructions
     senior-eng.md       # Senior Engineer role instructions (shared)
     qa.md               # QA Engineer role instructions
+    ux-designer.md      # Senior UI/UX Designer role instructions
   inbox/
     tech-lead.md        # Messages TO Tech Lead
     senior-eng-1.md     # Messages TO Senior Engineer 1
     senior-eng-2.md     # Messages TO Senior Engineer 2
     qa.md               # Messages TO QA
+    ux-designer.md      # Messages TO Senior UI/UX Designer
   outbox/
     tech-lead.md        # Output FROM Tech Lead
     senior-eng-1.md     # Output FROM Senior Engineer 1
     senior-eng-2.md     # Output FROM Senior Engineer 2
     qa.md               # Output FROM QA
+    ux-designer.md      # Output FROM Senior UI/UX Designer
   tasks.md              # Shared task board (single source of truth)
   README.md             # This file
 ```
@@ -39,7 +43,7 @@ agents/
 
 ## How to Start Each Agent Session
 
-Open **4 separate terminals** in the project root. In each one, start `claude` and paste the opening prompt for that role:
+Open **5 separate terminals** in the project root. In each one, start `claude` and paste the opening prompt for that role:
 
 ### Terminal 1 — Tech Lead
 ```
@@ -61,6 +65,11 @@ Read agents/roles/senior-eng.md to understand your role. Then read agents/inbox/
 Read agents/roles/qa.md to understand your role. Then read agents/inbox/qa.md for messages and agents/tasks.md for tasks awaiting QA. You are the QA Engineer.
 ```
 
+### Terminal 5 — Senior UI/UX Designer
+```
+Read agents/roles/ux-designer.md to understand your role. Then read agents/inbox/ux-designer.md for messages and agents/tasks.md for your assigned tasks. You are the Senior UI/UX Designer.
+```
+
 ---
 
 ## Workflow
@@ -69,21 +78,29 @@ Read agents/roles/qa.md to understand your role. Then read agents/inbox/qa.md fo
 You (manager)
   │
   ▼
-agents/tasks.md  ◄──────────────────────────────────────────┐
-  │                                                          │
-  ▼                                                          │
-Tech Lead                                                    │
-  │  reads tasks.md, assigns work, writes to engineer inboxes│
-  ▼                                                          │
-Senior Eng 1 / Senior Eng 2                                  │
-  │  implements task, writes summary to outbox               │
-  ▼                                                          │
-Tech Lead                                                    │
-  │  reads engineer outbox, reviews code, approves or sends back
-  ▼                                                          │
-QA Engineer                                                  │
-  │  reads approved outbox, runs tests, writes results       │
-  └─ updates tasks.md (qa-passed / qa-failed) ──────────────┘
+agents/tasks.md  ◄──────────────────────────────────────────────┐
+  │                                                              │
+  ▼                                                              │
+Tech Lead                                                        │
+  │  reads tasks.md, assigns work, writes to agent inboxes      │
+  ├──────────────────────────────────┐                          │
+  ▼                                  ▼                          │
+Senior Eng 1 / Senior Eng 2       Senior UI/UX Designer         │
+  │  implements task                 │  produces design specs    │
+  │  writes summary to outbox        │  writes specs to outbox   │
+  │◄─────────────────────────────────┘  notifies engineers       │
+  ▼                                                              │
+Tech Lead                                                        │
+  │  reviews code + design spec alignment                        │
+  │  approves or sends back                                      │
+  ▼                                                              │
+Senior UI/UX Designer                                            │
+  │  reviews implemented UI vs spec                              │
+  │  approves or flags deviations                                │
+  ▼                                                              │
+QA Engineer                                                      │
+  │  runs tests, writes results                                  │
+  └─ updates tasks.md (qa-passed / qa-failed) ──────────────────┘
 ```
 
 ### Step-by-step

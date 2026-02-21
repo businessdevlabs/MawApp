@@ -1,8 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useProviderProfile, useProviderServices, useCreateService, useUpdateService, useDeleteService } from '@/hooks/useProvider';
 import { useServiceCategories } from '@/hooks/useServiceCategories';
-import { useProviderSchedule } from '@/hooks/useProviderSchedule';
 import { Service } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,66 +25,10 @@ import {
   AutoAwesome
 } from '@mui/icons-material';
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-];
-
-interface TimeRange {
-  startTime: string;
-  endTime: string;
-}
-
-interface ServiceSlots {
-  [dayOfWeek: number]: TimeRange[];
-}
-
-// Helper functions to convert between formats
-const parseServiceSlotsToServiceSlots = (serviceSlots: string[]): ServiceSlots => {
-  const result: ServiceSlots = {};
-  serviceSlots.forEach(slotString => {
-    try {
-      const parsed = JSON.parse(slotString);
-      if (parsed.dayOfWeek !== undefined && parsed.startTime && parsed.endTime) {
-        if (!result[parsed.dayOfWeek]) {
-          result[parsed.dayOfWeek] = [];
-        }
-        result[parsed.dayOfWeek].push({
-          startTime: parsed.startTime,
-          endTime: parsed.endTime
-        });
-      }
-    } catch (e) {
-      console.warn('Failed to parse slot:', slotString);
-    }
-  });
-  return result;
-};
-
-const convertServiceSlotsToArray = (serviceSlots: ServiceSlots): string[] => {
-  const result: string[] = [];
-  Object.entries(serviceSlots).forEach(([dayOfWeek, ranges]) => {
-    ranges.forEach(range => {
-      result.push(JSON.stringify({
-        dayOfWeek: parseInt(dayOfWeek),
-        startTime: range.startTime,
-        endTime: range.endTime
-      }));
-    });
-  });
-  return result;
-};
-
 const ProviderServices = () => {
   const { data: provider, isLoading: providerLoading } = useProviderProfile();
   const { data: services = [], isLoading: servicesLoading } = useProviderServices();
   const { data: categories = [] } = useServiceCategories();
-  const { data: providerSchedule = [] } = useProviderSchedule();
   const createService = useCreateService();
   const updateService = useUpdateService();
   const deleteService = useDeleteService();
@@ -104,60 +47,8 @@ const ProviderServices = () => {
     maxBookingsPerDay: '',
     requirements: '',
     tags: '',
-    slots: {} as ServiceSlots,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  // Get available days from provider schedule
-  const availableDays = useMemo(() => {
-    return providerSchedule
-      .filter(schedule => schedule.isAvailable)
-      .map(schedule => ({
-        dayOfWeek: schedule.dayOfWeek,
-        dayLabel: DAYS_OF_WEEK.find(d => d.value === schedule.dayOfWeek)?.label || '',
-        minTime: schedule.startTime,
-        maxTime: schedule.endTime
-      }));
-  }, [providerSchedule]);
-
-  const handleAddTimeRange = (dayOfWeek: number) => {
-    const daySchedule = providerSchedule.find(s => s.dayOfWeek === dayOfWeek);
-    const defaultStart = daySchedule?.startTime || '09:00';
-    const defaultEnd = daySchedule?.endTime || '17:00';
-
-    setFormData(prev => ({
-      ...prev,
-      slots: {
-        ...prev.slots,
-        [dayOfWeek]: [
-          ...(prev.slots[dayOfWeek] || []),
-          { startTime: defaultStart, endTime: defaultEnd }
-        ]
-      }
-    }));
-  };
-
-  const handleRemoveTimeRange = (dayOfWeek: number, index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      slots: {
-        ...prev.slots,
-        [dayOfWeek]: prev.slots[dayOfWeek]?.filter((_, i) => i !== index) || []
-      }
-    }));
-  };
-
-  const handleTimeRangeChange = (dayOfWeek: number, index: number, field: keyof TimeRange, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      slots: {
-        ...prev.slots,
-        [dayOfWeek]: prev.slots[dayOfWeek]?.map((range: TimeRange, i) =>
-          i === index ? { ...range, [field]: value } : range
-        ) || []
-      }
-    }));
-  };
 
   const resetForm = () => {
     setFormData({
@@ -169,7 +60,6 @@ const ProviderServices = () => {
       maxBookingsPerDay: '',
       requirements: '',
       tags: '',
-      slots: {},
     });
     setFormErrors({});
     setCreateTab('manual');
@@ -189,32 +79,20 @@ const ProviderServices = () => {
     maxBookingsPerDay: number;
     requirements: string[];
     tags: string[];
-    slots?: string[];
   }
 
   const handleAIServiceGenerated = (generatedService: GeneratedService) => {
-    // Find the most appropriate category based on the generated service
     let selectedCategoryId = '';
     if (generatedService.categoryId === 'auto' && categories.length > 0) {
-      // Try to match category by service name or description
       const serviceLower = generatedService.name.toLowerCase() + ' ' + generatedService.description.toLowerCase();
-      
-      const categoryMatch = categories.find(cat => 
+      const categoryMatch = categories.find(cat =>
         serviceLower.includes(cat.name.toLowerCase())
       );
-      
       selectedCategoryId = categoryMatch?._id || categories[0]._id;
     } else {
       selectedCategoryId = generatedService.categoryId;
     }
 
-    // Parse slots if they exist
-    let parsedSlots: ServiceSlots = {};
-    if (generatedService.slots && generatedService.slots.length > 0) {
-      parsedSlots = parseServiceSlotsToServiceSlots(generatedService.slots);
-    }
-
-    // Update form data with AI-generated service
     setFormData({
       name: generatedService.name,
       description: generatedService.description,
@@ -224,10 +102,8 @@ const ProviderServices = () => {
       maxBookingsPerDay: generatedService.maxBookingsPerDay.toString(),
       requirements: generatedService.requirements?.join(', ') || '',
       tags: generatedService.tags?.join(', ') || '',
-      slots: parsedSlots
     });
 
-    // Switch to manual tab to show the form with pre-filled data
     setCreateTab('manual');
 
     toast({
@@ -239,54 +115,32 @@ const ProviderServices = () => {
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
-    // Name validation (min 2 characters)
     if (!formData.name.trim()) {
       errors.name = 'Service name is required';
     } else if (formData.name.trim().length < 2) {
       errors.name = 'Service name must be at least 2 characters';
     }
 
-    // Description validation (min 10 characters)
     if (!formData.description.trim()) {
       errors.description = 'Description is required';
     } else if (formData.description.trim().length < 10) {
       errors.description = 'Description must be at least 10 characters';
     }
 
-    // Category validation (required)
     if (!formData.categoryId) {
       errors.categoryId = 'Category is required';
     }
 
-    // Price validation (required, positive number)
     if (!formData.price) {
       errors.price = 'Price is required';
     } else if (parseFloat(formData.price) < 0) {
       errors.price = 'Price must be a positive number';
     }
 
-    // Duration validation (required, positive integer)
     if (!formData.duration) {
       errors.duration = 'Duration is required';
     } else if (parseInt(formData.duration) < 1) {
       errors.duration = 'Duration must be at least 1 minute';
-    }
-
-    // Slots validation - check for time conflicts and valid ranges
-    const slotsArray = convertServiceSlotsToArray(formData.slots);
-    if (slotsArray.length > 0) {
-      for (const slotString of slotsArray) {
-        try {
-          const slot = JSON.parse(slotString);
-          if (slot.startTime >= slot.endTime) {
-            errors.slots = 'End time must be after start time for all time slots';
-            break;
-          }
-        } catch (e) {
-          errors.slots = 'Invalid time slot format';
-          break;
-        }
-      }
     }
 
     setFormErrors(errors);
@@ -295,11 +149,11 @@ const ProviderServices = () => {
 
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
       await createService.mutateAsync({
         name: formData.name,
@@ -310,7 +164,6 @@ const ProviderServices = () => {
         maxBookingsPerDay: formData.maxBookingsPerDay ? parseInt(formData.maxBookingsPerDay) : 10,
         requirements: formData.requirements ? formData.requirements.split(',').map(r => r.trim()) : [],
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
-        slots: convertServiceSlotsToArray(formData.slots),
       });
 
       toast({
@@ -332,11 +185,11 @@ const ProviderServices = () => {
   const handleEditService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingService) return;
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
       await updateService.mutateAsync({
         id: editingService._id,
@@ -348,7 +201,6 @@ const ProviderServices = () => {
         maxBookingsPerDay: formData.maxBookingsPerDay ? parseInt(formData.maxBookingsPerDay) : 10,
         requirements: formData.requirements ? formData.requirements.split(',').map(r => r.trim()) : [],
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
-        slots: convertServiceSlotsToArray(formData.slots),
       });
 
       toast({
@@ -379,14 +231,13 @@ const ProviderServices = () => {
       maxBookingsPerDay: service.maxBookingsPerDay?.toString() || '10',
       requirements: service.requirements?.join(', ') || '',
       tags: service.tags?.join(', ') || '',
-      slots: service.slots ? parseServiceSlotsToServiceSlots(service.slots) : {},
     });
     setIsEditDialogOpen(true);
   };
 
   const handleDeleteService = async (serviceId: string) => {
     if (!confirm('Are you sure you want to delete this service?')) return;
-    
+
     try {
       await deleteService.mutateAsync(serviceId);
       toast({
@@ -451,7 +302,7 @@ const ProviderServices = () => {
                 </div>
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button 
+                    <Button
                       onClick={handleOpenCreateDialog}
                       className="bg-white/20 hover:bg-white/30 text-white border-white/30"
                     >
@@ -472,7 +323,7 @@ const ProviderServices = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <Tabs value={createTab} onValueChange={setCreateTab} className="w-full mt-6">
                       <TabsList className="grid w-full grid-cols-2 bg-blue-500 border-0 rounded-lg p-1">
                         <TabsTrigger
@@ -492,190 +343,124 @@ const ProviderServices = () => {
 
                       <TabsContent value="manual" className="mt-6">
                         <form onSubmit={handleCreateService} className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Service Name <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          required
-                          className={formErrors.name ? 'border-red-500' : ''}
-                        />
-                        {formErrors.name && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
-                        <Textarea
-                          id="description"
-                          value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          rows={3}
-                          className={formErrors.description ? 'border-red-500' : ''}
-                          placeholder="Enter at least 10 characters"
-                        />
-                        {formErrors.description && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.description}</p>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="price">Price ($) <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="price"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.price}
-                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                            required
-                            className={formErrors.price ? 'border-red-500' : ''}
-                          />
-                          {formErrors.price && (
-                            <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
-                          )}
-                        </div>
-                        <div>
-                          <Label htmlFor="duration">Duration (minutes) <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="duration"
-                            type="number"
-                            min="1"
-                            value={formData.duration}
-                            onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                            required
-                            className={formErrors.duration ? 'border-red-500' : ''}
-                          />
-                          {formErrors.duration && (
-                            <p className="text-sm text-red-500 mt-1">{formErrors.duration}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="categoryId">Category <span className="text-red-500">*</span></Label>
-                        <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
-                          <SelectTrigger className={formErrors.categoryId ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem key={category._id} value={category._id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {formErrors.categoryId && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.categoryId}</p>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="maxBookingsPerDay">Max Bookings/Day</Label>
-                          <Input
-                            id="maxBookingsPerDay"
-                            type="number"
-                            value={formData.maxBookingsPerDay}
-                            onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
-                            placeholder="10"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="requirements">Requirements (comma separated)</Label>
-                        <Input
-                          id="requirements"
-                          value={formData.requirements}
-                          onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-                          placeholder="Valid ID, Prior appointment"
-                        />
-                      </div>
-                      <div>
-                        <Label>Service Availability</Label>
-                        <div className="mt-2 space-y-3 max-h-60 overflow-y-auto border rounded-md p-4">
-                          {availableDays.length > 0 ? (
-                            availableDays.map((day) => (
-                              <div key={day.dayOfWeek} className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <Label className="font-medium text-sm">{day.dayLabel}</Label>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleAddTimeRange(day.dayOfWeek)}
-                                    className="h-7 px-2 text-xs"
-                                  >
-                                    + Add Time
-                                  </Button>
-                                </div>
-                                <div className="space-y-2 pl-4">
-                                  {(formData.slots[day.dayOfWeek] || []).map((range, index) => (
-                                    <div key={index} className="flex items-center space-x-2">
-                                      <Input
-                                        type="time"
-                                        value={range.startTime}
-                                        onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'startTime', e.target.value)}
-                                        className="w-32 h-8 text-xs"
-                                      />
-                                      <span className="text-gray-500 text-xs">to</span>
-                                      <Input
-                                        type="time"
-                                        value={range.endTime}
-                                        onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'endTime', e.target.value)}
-                                        className="w-32 h-8 text-xs"
-                                      />
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleRemoveTimeRange(day.dayOfWeek, index)}
-                                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                                      >
-                                        ×
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-sm text-gray-500">No available days. Please set up your schedule first.</p>
-                          )}
-                        </div>
-                        {formErrors.slots && (
-                          <p className="text-sm text-red-500 mt-1">{formErrors.slots}</p>
-                        )}
-                      </div>
-                      {/* <div>
-                        <Label htmlFor="tags">Tags (comma separated)</Label>
-                        <Input
-                          id="tags"
-                          value={formData.tags}
-                          onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                          placeholder="professional, consultation"
-                        />
-                      </div> */}
-                      <div className="flex justify-end space-x-2">
-                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit" disabled={createService.isPending} className="text-white" style={{backgroundColor: '#025bae'}}>
-                          {createService.isPending ? "Creating..." : "Create Service"}
-                        </Button>
-                      </div>
-                    </form>
-                  </TabsContent>
+                          <div>
+                            <Label htmlFor="name">Service Name <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="name"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              required
+                              className={formErrors.name ? 'border-red-500' : ''}
+                            />
+                            {formErrors.name && (
+                              <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>
+                            )}
+                          </div>
+                          <div>
+                            <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
+                            <Textarea
+                              id="description"
+                              value={formData.description}
+                              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                              rows={3}
+                              className={formErrors.description ? 'border-red-500' : ''}
+                              placeholder="Enter at least 10 characters"
+                            />
+                            {formErrors.description && (
+                              <p className="text-sm text-red-500 mt-1">{formErrors.description}</p>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="price">Price ($) <span className="text-red-500">*</span></Label>
+                              <Input
+                                id="price"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={formData.price}
+                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                required
+                                className={formErrors.price ? 'border-red-500' : ''}
+                              />
+                              {formErrors.price && (
+                                <p className="text-sm text-red-500 mt-1">{formErrors.price}</p>
+                              )}
+                            </div>
+                            <div>
+                              <Label htmlFor="duration">Duration (minutes) <span className="text-red-500">*</span></Label>
+                              <Input
+                                id="duration"
+                                type="number"
+                                min="1"
+                                value={formData.duration}
+                                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                                required
+                                className={formErrors.duration ? 'border-red-500' : ''}
+                              />
+                              {formErrors.duration && (
+                                <p className="text-sm text-red-500 mt-1">{formErrors.duration}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="categoryId">Category <span className="text-red-500">*</span></Label>
+                            <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
+                              <SelectTrigger className={formErrors.categoryId ? 'border-red-500' : ''}>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((category) => (
+                                  <SelectItem key={category._id} value={category._id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {formErrors.categoryId && (
+                              <p className="text-sm text-red-500 mt-1">{formErrors.categoryId}</p>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="maxBookingsPerDay">Max Bookings/Day</Label>
+                              <Input
+                                id="maxBookingsPerDay"
+                                type="number"
+                                value={formData.maxBookingsPerDay}
+                                onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
+                                placeholder="10"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="requirements">Requirements (comma separated)</Label>
+                            <Input
+                              id="requirements"
+                              value={formData.requirements}
+                              onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
+                              placeholder="Valid ID, Prior appointment"
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" disabled={createService.isPending} className="text-white" style={{backgroundColor: '#025bae'}}>
+                              {createService.isPending ? "Creating..." : "Create Service"}
+                            </Button>
+                          </div>
+                        </form>
+                      </TabsContent>
 
-                  <TabsContent value="ai" className="mt-6">
-                    <AIServiceCreator 
-                      onServiceGenerated={handleAIServiceGenerated}
-                      categories={categories}
-                      providerSchedule={providerSchedule}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </DialogContent>
+                      <TabsContent value="ai" className="mt-6">
+                        <AIServiceCreator
+                          onServiceGenerated={handleAIServiceGenerated}
+                          categories={categories}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
                 </Dialog>
               </div>
             </div>
@@ -925,63 +710,6 @@ const ProviderServices = () => {
                   />
                 </div>
                 <div>
-                  <Label>Service Availability</Label>
-                  <div className="mt-2 space-y-3 max-h-60 overflow-y-auto border rounded-md p-4">
-                    {availableDays.length > 0 ? (
-                      availableDays.map((day) => (
-                        <div key={day.dayOfWeek} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="font-medium text-sm">{day.dayLabel}</Label>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAddTimeRange(day.dayOfWeek)}
-                              className="h-7 px-2 text-xs"
-                            >
-                              + Add Time
-                            </Button>
-                          </div>
-                          <div className="space-y-2 pl-4">
-                            {(formData.slots[day.dayOfWeek] || []).map((range, index) => (
-                              <div key={index} className="flex items-center space-x-2">
-                                <Input
-                                  type="time"
-                                  value={range.startTime}
-                                  onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'startTime', e.target.value)}
-                                  min={day.minTime}
-                                  max={day.maxTime}
-                                  className="w-32 h-8 text-xs"
-                                />
-                                <span className="text-gray-500 text-xs">to</span>
-                                <Input
-                                  type="time"
-                                  value={range.endTime}
-                                  onChange={(e) => handleTimeRangeChange(day.dayOfWeek, index, 'endTime', e.target.value)}
-                                  min={day.minTime}
-                                  max={day.maxTime}
-                                  className="w-32 h-8 text-xs"
-                                />
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleRemoveTimeRange(day.dayOfWeek, index)}
-                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                                >
-                                  ×
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">No available days. Please set up your schedule first.</p>
-                    )}
-                  </div>
-                </div>
-                <div>
                   <Label htmlFor="edit-tags">Tags (comma separated)</Label>
                   <Input
                     id="edit-tags"
@@ -998,12 +726,12 @@ const ProviderServices = () => {
                     {updateService.isPending ? "Updating..." : "Update Service"}
                   </Button>
                 </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
+    </div>
   );
 };
 

@@ -6,7 +6,7 @@ import ServiceCategory from '../models/ServiceCategory.js';
 import ProviderSchedule from '../models/ProviderSchedule.js';
 import Booking from '../models/Booking.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
-import { uploadProfilePhoto, uploadToS3, handleUploadError } from '../middleware/upload.js';
+import { uploadProfilePhoto, uploadToS3, uploadBusinessImage, uploadServiceImage, makeUploadToS3, handleUploadError } from '../middleware/upload.js';
 import s3Service from '../services/s3Service.js';
 
 const router = express.Router();
@@ -716,6 +716,91 @@ router.get('/payments', authenticateToken, requireRole(['provider']), async (req
   } catch (error) {
     console.error('Get provider payments error:', error);
     res.status(500).json({ error: 'Failed to fetch payments' });
+  }
+});
+
+const env = process.env.NODE_ENV || 'development';
+
+// Upload business image
+router.put('/business-image', [
+  authenticateToken,
+  requireRole(['provider']),
+  uploadBusinessImage,
+  makeUploadToS3(`${env}/business-images`),
+  handleUploadError
+], async (req, res) => {
+  try {
+    if (req.s3Upload && !req.s3Upload.url) {
+      return res.status(500).json({ error: 'Upload failed' });
+    }
+    if (!req.s3Upload) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    const provider = await ServiceProvider.findOne({ userId: req.user._id });
+    if (!provider) {
+      return res.status(404).json({ error: 'Provider profile not found' });
+    }
+
+    // Delete old business image from S3 if it exists
+    if (provider.businessImage) {
+      const oldKey = s3Service.extractKeyFromUrl(provider.businessImage);
+      if (oldKey) {
+        await s3Service.deleteFile(oldKey);
+      }
+    }
+
+    provider.businessImage = req.s3Upload.url;
+    await provider.save();
+
+    res.json({ message: 'Business image updated successfully', businessImage: req.s3Upload.url });
+  } catch (error) {
+    console.error('Update business image error:', error);
+    res.status(500).json({ error: 'Failed to update business image' });
+  }
+});
+
+// Upload service image
+router.put('/services/:serviceId/image', [
+  authenticateToken,
+  requireRole(['provider']),
+  uploadServiceImage,
+  makeUploadToS3(`${env}/service-images`),
+  handleUploadError
+], async (req, res) => {
+  try {
+    if (req.s3Upload && !req.s3Upload.url) {
+      return res.status(500).json({ error: 'Upload failed' });
+    }
+    if (!req.s3Upload) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    const provider = await ServiceProvider.findOne({ userId: req.user._id });
+    if (!provider) {
+      return res.status(404).json({ error: 'Provider profile not found' });
+    }
+
+    const service = await Service.findOne({ _id: req.params.serviceId, providerId: provider._id });
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found or not owned by this provider' });
+    }
+
+    // Delete old service image from S3 if it exists
+    if (service.imageUrl) {
+      const oldKey = s3Service.extractKeyFromUrl(service.imageUrl);
+      if (oldKey) {
+        await s3Service.deleteFile(oldKey);
+      }
+    }
+
+    service.imageUrl = req.s3Upload.url;
+    await service.save();
+
+    res.json({ message: 'Service image updated successfully', imageUrl: req.s3Upload.url });
+  } catch (error) {
+    console.error('Update service image error:', error);
+    res.status(500).json({ error: 'Failed to update service image' });
   }
 });
 

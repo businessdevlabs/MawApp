@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import type { Service } from '@/services/api';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useServices } from '@/hooks/useServices';
@@ -12,15 +13,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import ServiceDetailModal from '@/components/modals/ServiceDetailModal';
 import {
   Search,
-  FilterList,
   Star,
   LocationOn,
   Schedule,
-  ContentCut,
-  FitnessCenter,
-  Favorite,
   Groups,
-  Palette
+  Build,
+  Palette,
+  ElectricBolt,
+  DonutLarge,
+  AcUnit,
+  Settings
 } from '@mui/icons-material';
 
 const Services = () => {
@@ -32,13 +34,13 @@ const Services = () => {
   const categories = categoriesData?.categories || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedService, setSelectedService] = useState<any>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isLoading = servicesLoading || categoriesLoading;
 
 
-  const handleBookNow = (service: any) => {
+  const handleBookNow = (service: Service) => {
     if (!user) {
       // Store the intended destination for after login
       localStorage.setItem('redirectAfterLogin', `/service/${service._id}`);
@@ -67,20 +69,20 @@ const Services = () => {
   // Helper function to get appropriate icon for each category
   function getIconForCategory(categoryName: string) {
     switch (categoryName) {
-      case 'Beauty & Personal Care':
-        return ContentCut;
-      case 'Health & Wellness':
-        return Favorite;
-      case 'Technology Services':
-        return Groups; // Could use a computer icon if available
-      case 'Professional Services':
-        return Groups;
-      case 'Home & Maintenance':
-        return Groups;
-      case 'Education & Training':
-        return Groups;
+      case 'Engine & Mechanical':
+        return Build;
+      case 'Body & Paint':
+        return Palette;
+      case 'Electrical & Diagnostics':
+        return ElectricBolt;
+      case 'Tyres & Wheels':
+        return DonutLarge;
+      case 'Air Conditioning':
+        return AcUnit;
+      case 'Servicing & MOT':
+        return Settings;
       default:
-        return Groups;
+        return Build;
     }
   }
 
@@ -134,7 +136,7 @@ const Services = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
-              placeholder="Search services, providers, or treatments..."
+              placeholder="Search services, providers, or repairs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-12 text-lg"
@@ -160,10 +162,6 @@ const Services = () => {
           </div>
 
           <div className="flex items-center space-x-4 text-sm text-gray-600">
-            <Button variant="outline" size="sm">
-              <FilterList className="w-4 h-4 mr-2" />
-              More Filters
-            </Button>
             <span>{filteredServices.length} services found</span>
           </div>
         </div>
@@ -172,6 +170,12 @@ const Services = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((service) => (
             <Card key={service._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
+              {/* Business image banner */}
+              <img
+                src={service.providerId?.businessImage || '/placeholder.svg'}
+                alt={service.providerId?.businessName || 'Business'}
+                className="w-full h-32 object-cover"
+              />
               {/* Header with service name */}
               <div className="px-4 py-3 text-white" style={{backgroundColor: '#025bae'}}>
                 <div className="flex items-center space-x-3">
@@ -223,13 +227,19 @@ const Services = () => {
                   {/* Rating and Price */}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {service.providerId?.averageRating || 4.8}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({service.providerId?.totalReviews || 0})
-                      </span>
+                      {(service.providerId?.totalReviews ?? 0) > 0 ? (
+                        <>
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {service.providerId?.averageRating}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({service.providerId?.totalReviews})
+                          </span>
+                        </>
+                      ) : (
+                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
+                      )}
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className="font-semibold text-lg" style={{color: '#025bae'}}>
@@ -245,15 +255,6 @@ const Services = () => {
             </Card>
           ))}
         </div>
-
-        {/* Load More */}
-        {filteredServices.length > 0 && (
-          <div className="text-center mt-12">
-            <Button variant="outline" size="lg" style={{backgroundColor: '#025bae', color: 'white', borderColor: '#025bae'}} className="hover:opacity-90">
-              Load More Services
-            </Button>
-          </div>
-        )}
 
         {/* No Results */}
         {filteredServices.length === 0 && (

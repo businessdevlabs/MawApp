@@ -41,15 +41,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData = await apiService.verifyToken(token);
             setUser(userData as AuthUser);
             setSession({ token });
+            setLoading(false);
           } catch (error) {
             // Token is invalid, remove it
             localStorage.removeItem('authToken');
             console.log('Invalid token removed');
+            setLoading(false);
           }
+        } else {
+          setLoading(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -79,9 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession({ token });
 
       console.log('Registration successful:', newUser.email);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
-      throw new Error(error.message || 'Registration failed');
+      throw new Error(error instanceof Error ? error.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -101,9 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession({ token });
       
       console.log('Login successful:', userData.email);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      throw new Error(error.message || 'Login failed');
+      throw new Error(error instanceof Error ? error.message : 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -118,9 +121,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       console.log('Logout successful');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Logout error:', error);
-      throw new Error(error.message || 'Logout failed');
+      throw new Error(error instanceof Error ? error.message : 'Logout failed');
     }
   };
 

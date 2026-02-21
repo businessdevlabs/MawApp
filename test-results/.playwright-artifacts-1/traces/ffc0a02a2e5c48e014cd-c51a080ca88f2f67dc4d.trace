@@ -1,0 +1,20 @@
+{"version":8,"type":"context-options","origin":"library","browserName":"","options":{},"platform":"darwin","wallTime":1771650661015,"monotonicTime":18661.267,"sdkLanguage":"javascript","contextId":"request-context@d590b93bfb80854ce62c2cbe799862b5","title":"dashboard-error-state.spec.ts:101 › BUG-004: Dashboard stats error state visibility › dashboard must not silently show zeros when stats API fails"}
+{"type":"before","callId":"call@5","startTime":18663.108,"class":"APIRequestContext","method":"fetch","params":{"url":"http://localhost:3001/api/auth/register","method":"POST","jsonData":"{\"email\":\"bug004-1771650661004@example.com\",\"password\":\"password123\",\"fullName\":\"BUG004 Client\",\"role\":\"client\"}","timeout":0},"stepId":"pw:api@5","beforeSnapshot":"before@call@5"}
+{"type":"log","callId":"call@5","time":18669.596,"message":"→ POST http://localhost:3001/api/auth/register"}
+{"type":"log","callId":"call@5","time":18669.608,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.7258.5 Safari/537.36"}
+{"type":"log","callId":"call@5","time":18669.612,"message":"  accept: */*"}
+{"type":"log","callId":"call@5","time":18669.615,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"call@5","time":18669.618,"message":"  content-type: application/json"}
+{"type":"log","callId":"call@5","time":18669.621,"message":"  content-length: 112"}
+{"type":"log","callId":"call@5","time":18931.414,"message":"← 201 Created"}
+{"type":"log","callId":"call@5","time":18931.423,"message":"  x-powered-by: Express"}
+{"type":"log","callId":"call@5","time":18931.429,"message":"  access-control-allow-origin: http://localhost:8080"}
+{"type":"log","callId":"call@5","time":18931.434,"message":"  vary: Origin"}
+{"type":"log","callId":"call@5","time":18931.438,"message":"  access-control-allow-credentials: true"}
+{"type":"log","callId":"call@5","time":18931.441,"message":"  content-type: application/json; charset=utf-8"}
+{"type":"log","callId":"call@5","time":18931.443,"message":"  content-length: 496"}
+{"type":"log","callId":"call@5","time":18931.445,"message":"  etag: W/\"1f0-5scpcixqc7wmVLSuCE5f//S1/1s\""}
+{"type":"log","callId":"call@5","time":18931.446,"message":"  date: Sat, 21 Feb 2026 05:11:01 GMT"}
+{"type":"log","callId":"call@5","time":18931.448,"message":"  connection: keep-alive"}
+{"type":"log","callId":"call@5","time":18931.45,"message":"  keep-alive: timeout=5"}
+{"type":"after","callId":"call@5","endTime":18931.51,"result":{"response":{"url":"http://localhost:3001/api/auth/register","status":201,"statusText":"Created","headers":[{"name":"X-Powered-By","value":"Express"},{"name":"Access-Control-Allow-Origin","value":"http://localhost:8080"},{"name":"Vary","value":"Origin"},{"name":"Access-Control-Allow-Credentials","value":"true"},{"name":"Content-Type","value":"application/json; charset=utf-8"},{"name":"Content-Length","value":"496"},{"name":"ETag","value":"W/\"1f0-5scpcixqc7wmVLSuCE5f//S1/1s\""},{"name":"Date","value":"Sat, 21 Feb 2026 05:11:01 GMT"},{"name":"Connection","value":"keep-alive"},{"name":"Keep-Alive","value":"timeout=5"}],"fetchUid":"12511393b026dda8564ee9e71b9ca66c"}},"afterSnapshot":"after@call@5"}

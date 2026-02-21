@@ -1,6 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 
+interface RawBooking {
+  _id: string;
+  appointmentDate: string;
+  startTime: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  createdAt: string;
+  clientId?: { fullName?: string };
+  serviceId?: { name?: string };
+  providerId?: { businessName?: string };
+}
+
 interface DashboardStats {
   totalBookings: number;
   totalRevenue: number;
@@ -35,48 +46,31 @@ export const useDashboardStats = () => {
   return useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
     queryFn: async (): Promise<DashboardStats> => {
-      try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-        const response = await fetch(`${baseUrl}/bookings/stats`, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch stats');
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${baseUrl}/bookings/stats`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
-        
-        const data = await response.json();
-        return {
-          totalBookings: data.totalBookings || 0,
-          totalRevenue: data.totalRevenue || data.totalSpent || 0,
-          totalClients: data.totalClients || data.favoriteProviders || 0,
-          averageRating: data.averageRating || 0,
-          totalReviews: data.totalReviews || 0,
-          monthlyGrowth: data.monthlyGrowth || {
-            bookings: 0,
-            revenue: 0,
-            clients: 0
-          }
-        };
-      } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
-        // Return empty stats as fallback
-        return {
-          totalBookings: 0,
-          totalRevenue: 0,
-          totalClients: 0,
-          averageRating: 0,
-          totalReviews: 0,
-          monthlyGrowth: {
-            bookings: 0,
-            revenue: 0,
-            clients: 0
-          }
-        };
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
       }
+
+      const data = await response.json();
+      return {
+        totalBookings: data.totalBookings || 0,
+        totalRevenue: data.totalRevenue || data.totalSpent || 0,
+        totalClients: data.totalClients || data.favoriteProviders || 0,
+        averageRating: data.averageRating || 0,
+        totalReviews: data.totalReviews || 0,
+        monthlyGrowth: data.monthlyGrowth || {
+          bookings: 0,
+          revenue: 0,
+          clients: 0
+        }
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -102,11 +96,11 @@ export const useUpcomingBookings = () => {
         const data = await response.json();
         
         // Transform the data to match our interface
-        return data.bookings.map((booking: any) => ({
+        return (data?.bookings ?? []).map((booking: RawBooking) => ({
           id: booking._id,
-          clientName: booking.clientId?.fullName,
-          serviceName: booking.serviceId?.name,
-          providerName: booking.providerId?.businessName,
+          clientName: booking.clientId?.fullName ?? '',
+          serviceName: booking.serviceId?.name ?? '',
+          providerName: booking.providerId?.businessName ?? '',
           appointmentDate: new Date(booking.appointmentDate).toLocaleDateString(),
           appointmentTime: booking.startTime,
           status: booking.status
@@ -140,7 +134,7 @@ export const useRecentActivity = () => {
         const data = await response.json();
         
         // Transform recent bookings into activity items
-        return data.bookings.map((booking: any, index: number) => ({
+        return data.bookings.map((booking: RawBooking) => ({
           id: booking._id,
           type: booking.status === 'completed' ? 'booking' : 
                 booking.status === 'cancelled' ? 'booking' : 'booking',

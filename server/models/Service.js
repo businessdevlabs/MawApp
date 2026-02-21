@@ -51,7 +51,13 @@ const serviceSchema = new mongoose.Schema({
   slots: [{
     type: String,
     trim: true
-  }]
+  }],
+  imageUrl: {
+    type: String,
+    trim: true,
+    required: false,
+    default: null
+  }
 }, {
   timestamps: true
 });

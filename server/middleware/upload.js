@@ -28,6 +28,38 @@ const upload = multer({
 });
 
 export const uploadProfilePhoto = upload.single('profilePhoto');
+export const uploadBusinessImage = upload.single('businessImage');
+export const uploadServiceImage = upload.single('serviceImage');
+
+// Parameterised S3 upload factory — same logic as uploadToS3 but targets a specific folder
+export const makeUploadToS3 = (folder) => async (req, res, next) => {
+  try {
+    if (req.file) {
+      if (!s3Service.isValidImageType(req.file.mimetype)) {
+        return res.status(400).json({ error: 'Invalid file type. Only image files are allowed.' });
+      }
+      if (!s3Service.isValidFileSize(req.file.size)) {
+        return res.status(400).json({ error: 'File size too large. Maximum size is 5MB.' });
+      }
+      const uploadResult = await s3Service.uploadFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        folder
+      );
+      req.s3Upload = {
+        url: uploadResult.url,
+        key: uploadResult.key,
+        fileName: uploadResult.fileName,
+        eTag: uploadResult.eTag
+      };
+    }
+    next();
+  } catch (error) {
+    console.error('S3 upload error:', error);
+    res.status(500).json({ error: 'Failed to upload file to cloud storage', details: error.message });
+  }
+};
 
 // Middleware to upload file to S3 after multer processes it
 export const uploadToS3 = async (req, res, next) => {

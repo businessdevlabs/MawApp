@@ -54,12 +54,13 @@ interface ProfileFormData {
 }
 
 // Helper functions to convert between formats
-const parseClientSlotsToScheduleSlots = (clientSlots: string[]): ScheduleSlots => {
+const parseClientSlotsToScheduleSlots = (clientSlots: string[], onParseError?: () => void): ScheduleSlots => {
   const result: ScheduleSlots = {};
   DAYS_OF_WEEK.forEach(day => {
     result[day.value] = [];
   });
 
+  let failedCount = 0;
   clientSlots.forEach(slotString => {
     try {
       const parsed = JSON.parse(slotString);
@@ -72,8 +73,14 @@ const parseClientSlotsToScheduleSlots = (clientSlots: string[]): ScheduleSlots =
       });
     } catch (e) {
       console.warn('Failed to parse client slot:', slotString);
+      failedCount++;
     }
   });
+
+  if (failedCount > 0) {
+    onParseError?.();
+  }
+
   return result;
 };
 
@@ -119,7 +126,13 @@ const Profile = () => {
   // Initialize form with client profile data
   useEffect(() => {
     if (clientProfile) {
-      const scheduleSlots = parseClientSlotsToScheduleSlots(clientProfile.schedule || []);
+      const scheduleSlots = parseClientSlotsToScheduleSlots(clientProfile.schedule || [], () => {
+        toast({
+          title: 'Warning',
+          description: 'Some schedule slots could not be loaded due to corrupted data.',
+          variant: 'destructive',
+        });
+      });
       reset({
         fullName: clientProfile.fullName || '',
         phone: clientProfile.phone || '',
@@ -127,7 +140,7 @@ const Profile = () => {
         scheduleSlots
       });
     }
-  }, [clientProfile, reset]);
+  }, [clientProfile, reset, toast]);
 
   const watchedScheduleSlots = watch('scheduleSlots');
 
@@ -175,7 +188,7 @@ const Profile = () => {
 
       toast({
         title: t('common.success'),
-        description: t('profile.profileUpdated'), //88888888
+        description: t('profile.profileUpdated'),
       });
 
       // Reset form state to make it no longer dirty
@@ -189,9 +202,9 @@ const Profile = () => {
     }
   };
 
-  const handleAIScheduleGenerated = async (generatedSchedule: any) => {
+  const handleAIScheduleGenerated = async (generatedSchedule: Record<string, TimeRange[]>) => {
     console.log('Received AI schedule in Profile:', generatedSchedule);
-    
+
     // Convert AI-generated schedule to the form format
     const convertedSchedule: ScheduleSlots = {};
 
@@ -201,7 +214,7 @@ const Profile = () => {
     });
 
     // Populate with AI-generated data
-    Object.entries(generatedSchedule).forEach(([dayName, slots]: [string, any]) => {
+    Object.entries(generatedSchedule).forEach(([dayName, slots]: [string, TimeRange[]]) => {
       const dayIndex = DAYS_OF_WEEK.find(d => d.label.toLowerCase() === dayName.toLowerCase())?.value;
       if (dayIndex !== undefined && Array.isArray(slots)) {
         convertedSchedule[dayIndex] = slots;

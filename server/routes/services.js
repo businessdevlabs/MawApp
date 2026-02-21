@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
       .populate('category', 'name description icon')
       .populate({
         path: 'providerId',
-        select: 'businessName businessAddress businessPhone businessEmail averageRating totalReviews status',
+        select: 'businessName businessAddress businessPhone businessEmail profilePhoto businessImage businessHours averageRating totalReviews status',
         match: { status: { $in: ['approved', 'pending'] } } // Show approved and pending providers
       })
       .sort({ createdAt: -1 })
@@ -120,20 +120,20 @@ router.get('/category/:categoryId', async (req, res) => {
       .populate('category', 'name description icon')
       .populate({
         path: 'providerId',
-        select: 'businessName businessAddress businessPhone businessEmail averageRating totalReviews status',
+        select: 'businessName businessAddress businessPhone businessEmail profilePhoto businessImage businessHours averageRating totalReviews status',
         match: { status: { $in: ['approved', 'pending'] } }
       })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
-    
+
     const filteredServices = services.filter(service => service.providerId !== null);
-    
+
     const totalCount = await Service.countDocuments({
       ...query,
       providerId: { $in: await ServiceProvider.find({ status: { $in: ['approved', 'pending'] } }).distinct('_id') }
     });
-    
+
     res.json({
       services: filteredServices,
       pagination: {

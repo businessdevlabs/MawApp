@@ -27,6 +27,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="/service/:serviceId" element={<ServiceDetail />} />
               <Route path="/provider/:providerId" element={<ProviderDetail />} />
               <Route path="/bookings" element={<MyBookings />} />
+              <Route path="/messages" element={<Messages />} />
               <Route path="/profile" element={<Profile />} />
               
               {/* Provider Routes */}
@@ -83,6 +85,7 @@ const App = () => (
               <Route path="/provider/schedule" element={<ProviderSchedule />} />
               <Route path="/provider/services" element={<ProviderServices />} />
               <Route path="/provider/payments" element={<ProviderPayments />} />
+              <Route path="/provider/messages" element={<Messages />} />
               
               {/* Admin Routes */}
               <Route path="/admin/dashboard" element={<AdminDashboard />} />

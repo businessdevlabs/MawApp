@@ -16,20 +16,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Search,
-  FilterList,
   Star,
   LocationOn,
-  Schedule,
-  ContentCut,
-  FitnessCenter,
-  Favorite,
   Groups,
   Business,
   Phone,
   Language,
   Tune,
   UnfoldMore,
-  Close
+  Close,
+  Build,
+  Palette,
+  ElectricBolt,
+  DonutLarge,
+  AcUnit,
+  Settings
 } from '@mui/icons-material';
 
 const Providers = () => {
@@ -93,20 +94,13 @@ const Providers = () => {
   // Helper function to get appropriate icon for each category
   function getIconForCategory(categoryName: string) {
     switch (categoryName) {
-      case 'Beauty & Personal Care':
-        return ContentCut;
-      case 'Health & Wellness':
-        return Favorite;
-      case 'Technology Services':
-        return Groups;
-      case 'Professional Services':
-        return Groups;
-      case 'Home & Maintenance':
-        return Groups;
-      case 'Education & Training':
-        return Groups;
-      default:
-        return Groups;
+      case 'Engine & Mechanical':      return Build;
+      case 'Body & Paint':             return Palette;
+      case 'Electrical & Diagnostics': return ElectricBolt;
+      case 'Tyres & Wheels':           return DonutLarge;
+      case 'Air Conditioning':         return AcUnit;
+      case 'Servicing & MOT':          return Settings;
+      default:                         return Build;
     }
   }
 
@@ -337,6 +331,12 @@ const Providers = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {providers.map((provider) => (
             <Card key={provider._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
+              {/* Business image banner */}
+              <img
+                src={provider.businessImage || '/placeholder.svg'}
+                alt="Business"
+                className="w-full h-32 object-cover"
+              />
               {/* Header with provider info */}
               <div className="px-4 py-3 text-white" style={{backgroundColor: '#025bae'}}>
                 <div className="flex items-center space-x-3">
@@ -390,13 +390,19 @@ const Providers = () => {
                   {/* Services and Rating */}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {provider.averageRating || 4.8}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({provider.totalReviews || 0})
-                      </span>
+                      {(provider.totalReviews ?? 0) > 0 ? (
+                        <>
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {provider.averageRating}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({provider.totalReviews})
+                          </span>
+                        </>
+                      ) : (
+                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
+                      )}
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center space-x-1">
@@ -423,9 +429,11 @@ const Providers = () => {
                         </Badge>
                       )}
                     </div>
-                    <Badge className="bg-green-50 text-green-700 border-green-200">
-                      Verified
-                    </Badge>
+                    {(provider as { isVerified?: boolean }).isVerified === true && (
+                      <Badge className="bg-green-50 text-green-700 border-green-200">
+                        Verified
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </CardContent>

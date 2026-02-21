@@ -83,7 +83,7 @@ const Register = () => {
       
       toast({
         title: "Account created!",
-        description: "Welcome to BookEase. Your account has been created successfully.",
+        description: "Welcome to Zenith. Your account has been created successfully.",
       });
       
       // Don't navigate here - let the useEffect handle it after user state is set

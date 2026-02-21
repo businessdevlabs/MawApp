@@ -1,5 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+interface RawBooking {
+  _id: string;
+  appointmentDate: string;
+  startTime: string;
+  durationMinutes: number;
+  totalAmount: number;
+  status: string;
+  notes?: string;
+  serviceId?: { name?: string; description?: string; price?: number };
+  providerId?: { _id?: string; businessName?: string; businessAddress?: string; businessPhone?: string };
+}
+
 export const useBookings = () => {
   return useQuery({
     queryKey: ['bookings'],
@@ -20,7 +32,7 @@ export const useBookings = () => {
         const data = await response.json();
         
         // Transform the API response to match the expected format
-        return data.bookings.map((booking: any) => ({
+        return data.bookings.map((booking: RawBooking) => ({
           id: booking._id,
           appointment_date: booking.appointmentDate.split('T')[0], // Convert to YYYY-MM-DD
           appointment_time: booking.startTime,
@@ -34,6 +46,7 @@ export const useBookings = () => {
             price: booking.serviceId?.price
           },
           provider: {
+            id: booking.providerId?._id,
             business_name: booking.providerId?.businessName,
             business_address: booking.providerId?.businessAddress,
             business_phone: booking.providerId?.businessPhone
@@ -61,7 +74,8 @@ export const useCreateBooking = () => {
       total_price: number;
       notes?: string;
     }) => {
-      const response = await fetch('http://localhost:3001/api/bookings', {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${baseUrl}/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

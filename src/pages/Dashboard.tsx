@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDashboardStats, useUpcomingBookings, useRecentActivity } from '@/hooks/useDashboard';
 import { useUpdateBooking } from '@/hooks/useBookings';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 import {
   CalendarToday,
   Schedule,
@@ -21,11 +22,21 @@ import {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useDashboardStats();
   const { data: upcomingBookings = [], isLoading: bookingsLoading } = useUpcomingBookings();
   const { data: recentActivity = [], isLoading: activityLoading } = useRecentActivity();
   const updateBooking = useUpdateBooking();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (statsError) {
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard stats. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
+  }, [statsError, toast]);
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
@@ -235,14 +246,10 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Stats Grid */}
-        <div className={`grid gap-6 mt-8 ${
-          isProvider || isAdmin
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-            : 'grid-cols-1 md:grid-cols-1 lg:grid-cols-1 max-w-md mx-auto'
-        }`}>
+        {/* Stats Grid — provider/admin only */}
+        {(isProvider || isAdmin) && (
+        <div className="grid gap-6 mt-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
 
-          {/* Provider and Admin only cards */}
           {(isProvider || isAdmin) && (
             <>
               <Card className="shadow-sm border-0 overflow-hidden">
@@ -321,6 +328,7 @@ const Dashboard = () => {
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   );

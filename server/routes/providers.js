@@ -190,7 +190,9 @@ router.get('/', authenticateToken, async (req, res) => {
           },
           totalReviews: { $ifNull: ['$totalReviews', 0] },
           coordinates: 1,
-          createdAt: 1
+          createdAt: 1,
+          businessImage: 1,
+          profilePhoto: 1
         }
       },
       
@@ -251,7 +253,9 @@ router.get('/', authenticateToken, async (req, res) => {
       averageRating: provider.averageRating,
       totalReviews: provider.totalReviews,
       coordinates: provider.coordinates,
-      createdAt: provider.createdAt
+      createdAt: provider.createdAt,
+      businessImage: provider.businessImage,
+      profilePhoto: provider.profilePhoto
     }));
 
     res.json({
@@ -295,6 +299,8 @@ router.get('/:providerId', authenticateToken, async (req, res) => {
       businessEmail: provider.businessEmail,
       website: provider.website,
       category: provider.category,
+      profilePhoto: provider.profilePhoto,
+      businessImage: provider.businessImage,
       services: services,
       averageRating: provider.averageRating || 4.8,
       totalReviews: provider.totalReviews || 0,

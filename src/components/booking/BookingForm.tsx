@@ -13,13 +13,18 @@ import TimeSlotPicker from './TimeSlotPicker';
 import { CalendarToday, Schedule, LocationOn, Person, AttachMoney } from '@mui/icons-material';
 import { format } from 'date-fns';
 
+interface DayHours {
+  open: string;
+  close: string;
+  isOpen: boolean;
+}
+
 interface Service {
   _id: string;
   name: string;
   description: string;
   duration: number;
   price: number;
-  slots?: string[];
   providerId: {
     _id: string;
     businessName: string;
@@ -27,6 +32,7 @@ interface Service {
     businessPhone?: string;
     averageRating?: number;
     totalReviews?: number;
+    businessHours?: { [day: string]: DayHours };
   };
 }
 
@@ -105,7 +111,7 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
           onDateSelect={setSelectedDate}
           onTimeSelect={setSelectedTime}
           duration={service.duration}
-          serviceSlots={service.slots}
+          businessHours={service.providerId.businessHours}
         />
       </div>
 

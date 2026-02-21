@@ -1,30 +1,58 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBookings, useUpdateBooking } from '@/hooks/useBookings';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import ReviewModal from '@/components/modals/ReviewModal';
+import {
   CalendarToday,
   Schedule,
-  LocationOn,
-  Person,
   Close,
   CheckCircle,
-  Warning
+  Warning,
+  RateReview
 } from '@mui/icons-material';
-import { format, parseISO, isPast } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const MyBookings = () => {
   const { user } = useAuth();
-  const { data: bookings, isLoading } = useBookings();
+  const { data: bookings, isLoading, refetch } = useBookings();
   const updateBooking = useUpdateBooking();
   const { toast } = useToast();
+
+  const [reviewModal, setReviewModal] = useState<{
+    open: boolean;
+    providerId: string;
+    providerName: string;
+  }>({ open: false, providerId: '', providerName: '' });
+
+  // Track which providers have been reviewed this session
+  const [reviewedProviderIds, setReviewedProviderIds] = useState<Set<string>>(new Set());
+
+  const openReviewModal = (booking: { provider?: { id?: string; business_name?: string } }) => {
+    setReviewModal({
+      open: true,
+      providerId: booking.provider?.id || '',
+      providerName: booking.provider?.business_name || 'Provider',
+    });
+  };
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
@@ -235,15 +263,35 @@ const MyBookings = () => {
                         </div>
 
                         {booking.status === 'pending' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCancelBooking(booking.id)}
-                            disabled={updateBooking.isPending}
-                            className="text-xs"
-                          >
-                            Cancel
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={updateBooking.isPending}
+                                className="text-xs"
+                              >
+                                Cancel
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel this booking? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleCancelBooking(booking.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Confirm Cancellation
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
 
@@ -305,14 +353,30 @@ const MyBookings = () => {
                         </p>
                       </div>
 
-                      <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Schedule className="w-4 h-4 text-green-500" />
-                          <span>{booking.appointment_time}</span>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center gap-1">
+                            <Schedule className="w-4 h-4 text-green-500" />
+                            <span>{booking.appointment_time}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">${booking.total_price}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">${booking.total_price}</span>
-                        </div>
+                        {booking.provider?.id && !reviewedProviderIds.has(booking.provider.id) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                            onClick={() => openReviewModal(booking)}
+                          >
+                            <RateReview className="w-3 h-3 mr-1" />
+                            Leave Review
+                          </Button>
+                        )}
+                        {booking.provider?.id && reviewedProviderIds.has(booking.provider.id) && (
+                          <span className="text-xs text-green-600 font-medium">Reviewed ✓</span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -322,6 +386,17 @@ const MyBookings = () => {
           </Card>
         </div>
       </div>
+
+      <ReviewModal
+        open={reviewModal.open}
+        onClose={() => setReviewModal(prev => ({ ...prev, open: false }))}
+        providerId={reviewModal.providerId}
+        providerName={reviewModal.providerName}
+        onReviewSubmitted={() => {
+          setReviewedProviderIds(prev => new Set([...prev, reviewModal.providerId]));
+          refetch?.();
+        }}
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProviderProfile, useUpdateProviderProfile } from '@/hooks/useProvider';
 import { useServiceCategories, useCategorySubcategories } from '@/hooks/useServiceCategories';
+import { apiService } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,20 +46,13 @@ const ProviderProfile = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [selectedBusinessImage, setSelectedBusinessImage] = useState<File | null>(null);
+  const [businessImagePreview, setBusinessImagePreview] = useState<string | null>(null);
+  const [uploadingBusinessImage, setUploadingBusinessImage] = useState(false);
 
   // Fetch subcategories dynamically when category is selected
   const { data: subcategoriesData, isLoading: subcategoriesLoading } = useCategorySubcategories(selectedCategoryId || '');
   const availableSubcategories = React.useMemo(() => subcategoriesData?.subcategories || [], [subcategoriesData]);
-
-  // Debug subcategories loading
-  React.useEffect(() => {
-    console.log('Subcategories state:', {
-      selectedCategoryId,
-      subcategoriesLoading,
-      subcategoriesData,
-      availableSubcategories
-    });
-  }, [selectedCategoryId, subcategoriesLoading, subcategoriesData, availableSubcategories]);
 
    // Initialize form with React Hook Form
    const form = useForm<ProfileFormData>({
@@ -81,28 +75,15 @@ const ProviderProfile = () => {
     if (provider?.subcategory && availableSubcategories.length > 0 && !subcategoriesLoading) {
       const currentSubcategory = form.getValues('subcategory');
       if (!currentSubcategory && availableSubcategories.includes(provider.subcategory)) {
-        console.log('Restoring subcategory value:', provider.subcategory);
         form.setValue('subcategory', provider.subcategory, { shouldDirty: false });
       }
     }
   }, [provider?.subcategory, availableSubcategories, subcategoriesLoading, form]);
 
-  // Debug categories
-  React.useEffect(() => {
-    console.log('Available categories:', categories);
-  }, [categories]);
-
-
-
   const { control, handleSubmit, reset, formState: { errors, isDirty } } = form;
 
-  console.log('errors22', errors);
   React.useEffect(() => {
     if (provider) {
-      console.log('Provider data:', provider);
-      console.log('Provider category:', provider.category);
-      console.log('Provider subcategory:', provider.subcategory);
-      console.log('Provider profilePhoto:', provider.profilePhoto);
       const initialData = {
         businessName: provider.businessName || '',
         businessDescription: provider.businessDescription || '',
@@ -114,13 +95,11 @@ const ProviderProfile = () => {
         subcategory: provider.subcategory || null,
         coordinates: provider.coordinates,
       };
-      console.log('Form initial data:', initialData);
       reset(initialData);
 
       // Set initial category for subcategory fetching
       if (provider.category) {
         const categoryId = typeof provider.category === 'object' ? provider.category._id : provider.category;
-        console.log('Setting selectedCategoryId to:', categoryId);
         setSelectedCategoryId(categoryId);
       }
 
@@ -194,6 +173,44 @@ const ProviderProfile = () => {
     const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
+    }
+  };
+
+  // Handle business image selection
+  const handleBusinessImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({ title: 'Invalid file type', description: 'Please select an image file.', variant: 'destructive' });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: 'File too large', description: 'Please select an image smaller than 5MB.', variant: 'destructive' });
+        return;
+      }
+      setSelectedBusinessImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setBusinessImagePreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload business image to dedicated endpoint
+  const handleBusinessImageUpload = async () => {
+    if (!selectedBusinessImage) return;
+    setUploadingBusinessImage(true);
+    try {
+      await apiService.uploadBusinessImage(selectedBusinessImage);
+      toast({ title: 'Business image uploaded', description: 'Your business image has been updated successfully.' });
+      setSelectedBusinessImage(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to upload business image.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingBusinessImage(false);
     }
   };
 
@@ -373,6 +390,49 @@ const ProviderProfile = () => {
               </div>
             </div>
             <CardContent className="p-8">
+              {/* Business Image Upload */}
+              <div className="mb-8 space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-900">Business Image</label>
+                  <p className="text-xs text-gray-500 mt-0.5">Banner image shown on service listings and your provider page</p>
+                </div>
+                {(businessImagePreview || provider?.businessImage) && (
+                  <img
+                    src={businessImagePreview || provider?.businessImage}
+                    alt="Business banner"
+                    className="w-full h-40 object-cover rounded-lg border border-gray-200"
+                  />
+                )}
+                <div className="flex items-center gap-3">
+                  <label
+                    htmlFor="business-image-upload"
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <CameraAlt className="w-4 h-4 mr-2" />
+                    {businessImagePreview ? 'Change Image' : 'Select Image'}
+                    <input
+                      id="business-image-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleBusinessImageChange}
+                    />
+                  </label>
+                  {selectedBusinessImage && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleBusinessImageUpload}
+                      disabled={uploadingBusinessImage}
+                      style={{ backgroundColor: '#025bae' }}
+                      className="text-white hover:opacity-90"
+                    >
+                      {uploadingBusinessImage ? 'Uploading...' : 'Upload Image'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                   <div>
                     <Label htmlFor="businessName">Business Name <span className="text-red-500">*</span></Label>
@@ -440,10 +500,7 @@ const ProviderProfile = () => {
 
                     {/* Subcategory - always show but conditionally enabled */}
                     <div className="space-y-2">
-                      <Label htmlFor="subcategory">
-                        Specialization
-                        {selectedCategoryName === 'Health & Wellness' && <span className="text-red-500">*</span>}
-                      </Label>
+                      <Label htmlFor="subcategory">Specialization</Label>
                       <Controller
                         name="subcategory"
                         control={control}
@@ -462,8 +519,6 @@ const ProviderProfile = () => {
                                     ? "Loading..."
                                     : availableSubcategories.length === 0
                                     ? "No specializations"
-                                    : selectedCategoryName === 'Health & Wellness'
-                                    ? "Select specialization"
                                     : "Select specialization"
                                 }
                               />
@@ -478,11 +533,6 @@ const ProviderProfile = () => {
                           </Select>
                         )}
                       />
-                      {selectedCategoryName === 'Health & Wellness' && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          Required for medical providers
-                        </p>
-                      )}
                       {!selectedCategoryId && (
                         <p className="text-sm text-gray-500 mt-1">
                           Select category first

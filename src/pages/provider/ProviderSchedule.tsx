@@ -163,6 +163,23 @@ const ProviderSchedule = () => {
   };
 
   const handleSaveSchedule = async () => {
+    // Validate that end time is after start time for all active days
+    for (const day of DAYS_OF_WEEK) {
+      const dayData = scheduleData[day.value];
+      if (dayData.isAvailable) {
+        for (const slot of dayData.timeSlots) {
+          if (slot.startTime >= slot.endTime) {
+            toast({
+              title: "Invalid time",
+              description: `${day.label}: end time must be after start time.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+    }
+
     try {
       const schedulesToSave = DAYS_OF_WEEK.map(day => {
         const dayData = scheduleData[day.value];

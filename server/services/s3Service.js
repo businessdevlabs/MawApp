@@ -61,11 +61,12 @@ class S3Service {
    * @param {string} mimeType - File mime type
    * @returns {Promise<Object>} - Upload result with S3 URL and key
    */
-  async uploadFile(fileBuffer, originalName, mimeType) {
+  async uploadFile(fileBuffer, originalName, mimeType, folder = null) {
     this.initialize();
     try {
       const fileName = this.generateFileName(originalName);
-      const key = `${this.profilePhotosFolder}/${fileName}`;
+      const targetFolder = folder || this.profilePhotosFolder;
+      const key = `${targetFolder}/${fileName}`;
 
       const command = new PutObjectCommand({
         Bucket: this.bucketName,

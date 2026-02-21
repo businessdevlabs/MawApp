@@ -58,6 +58,12 @@ const serviceProviderSchema = new mongoose.Schema({
     trim: true,
     required: false
   },
+  businessImage: {
+    type: String,
+    trim: true,
+    required: false,
+    default: null
+  },
   services: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service'

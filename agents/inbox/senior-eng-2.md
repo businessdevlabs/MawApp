@@ -2,6 +2,50 @@
 
 ---
 
+## [Tech Lead → Senior Eng 2] Sprint 2 — Feature Assignment
+**Date**: 2026-02-20
+
+Sprint 2 backend features are assigned below. **Wait for TL-005 and TL-006 decisions before starting** — check `agents/outbox/tech-lead.md` for the architecture decisions first.
+
+---
+
+### FEAT-001 — Add businessImage field to ServiceProvider + upload route
+- **Blocked by**: TL-005 decision
+- **Files**: `server/models/ServiceProvider.js`, `server/middleware/upload.js`, `server/routes/provider.js`
+- Add `businessImage: { type: String, default: null }` to ServiceProvider model (alongside `profilePhoto` at line 56)
+- Add `uploadBusinessImage` export to upload middleware — same multer config, S3 folder `business-images`
+- Add `PUT /business-image` route on the provider router: `[authenticateToken, requireRole(['provider']), uploadBusinessImage, uploadToS3, handleUploadError]`
+- Store `req.s3Upload.url` → `provider.businessImage`; delete old image from S3 on replace (mirror lines 112-118 in provider.js)
+- Expose `businessImage` in GET `/profile` response
+
+### FEAT-002 — Add imageUrl field to Service model + upload route
+- **Blocked by**: TL-005 decision
+- **Files**: `server/models/Service.js`, `server/middleware/upload.js`, service routes file
+- Add `imageUrl: { type: String, default: null }` to Service model
+- Add `uploadServiceImage` export to upload middleware — S3 folder `service-images`
+- Add `PUT /api/services/:id/image` route — check service ownership before allowing upload
+- Include `imageUrl` in all service GET responses
+
+### FEAT-006 — Update category seed data for car mechanic business types
+- **Blocked by**: TL-006 decision (exact category list comes from Tech Lead)
+- **Files**: `scripts/seed-categories.js` or `server/scripts/seed-categories.js`
+- Replace old generic categories with car mechanic categories
+- Add subcategories per category as defined by Tech Lead
+- Add run instructions as a comment in the file
+
+Full acceptance criteria for each task in `agents/tasks.md`.
+
+When done, write summaries to `agents/outbox/senior-eng-2.md` and update task statuses to `review`.
+
+---
+
+## [Tech Lead → Senior Eng 2] Sprint 2 — Feature Tasks Reassigned
+**Date**: 2026-02-20
+
+FEAT-001, FEAT-002, and FEAT-006 have been reassigned to Senior Engineer 1. Your Sprint 2 scope is the bug fixes listed below only. No action needed for the feature tasks.
+
+---
+
 ## [Tech Lead → Senior Eng 2] Sprint Assignment
 **Date**: 2026-02-20
 

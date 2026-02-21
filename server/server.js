@@ -11,6 +11,8 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 // Debug: Check if environment variables are loaded
 console.log('DEBUG: Environment loaded. OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -25,9 +27,32 @@ import servicesRoutes from './routes/services.js';
 import bookingRoutes from './routes/bookings.js';
 import adminRoutes from './routes/admin.js';
 import aiBookingRoutes from './routes/ai-booking.js';
+import reviewsRoutes from './routes/reviews.js';
+import chatRoutes from './routes/chat.js';
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Socket.io setup
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+    credentials: true
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.on('join_conversation', (conversationId) => {
+    socket.join(conversationId);
+  });
+  socket.on('leave_conversation', (conversationId) => {
+    socket.leave(conversationId);
+  });
+});
+
+// Make io accessible to route handlers
+app.set('io', io);
 
 // Middleware
 app.use(cors({
@@ -79,6 +104,8 @@ app.use('/api/services', servicesRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai-booking', aiBookingRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -125,7 +152,7 @@ const connectDB = async () => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`📋 API Documentation: http://localhost:${PORT}/api/health`);
     });

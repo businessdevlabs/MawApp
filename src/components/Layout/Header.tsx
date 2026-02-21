@@ -1,23 +1,23 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProviderProfile } from '@/hooks/useProvider';
-import { CalendarToday, Person, Logout, Settings, Store, Schedule, BarChart, Shield, Groups, List, AutorenewRounded } from '@mui/icons-material';
+import { CalendarToday, Person, Logout, Settings, Store, Schedule, BarChart, Shield, Groups, List, AutorenewRounded, Menu, Chat } from '@mui/icons-material';
 
 const Header = () => {
   const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Fetch provider profile data if user is a provider
   const { data: providerData } = useProviderProfile(profile?.role === 'provider');
 
-  console.log('profilePhoto2', profile)
-  console.log('providerData', providerData)
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -27,7 +27,7 @@ const Header = () => {
     }
   };
 
-  const isProviderRoute = location.pathname.startsWith('/provider');
+  const isProviderRoute = location.pathname.startsWith('/provider/') || location.pathname === '/provider';
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isProvider = profile?.role === 'provider';
   const isAdmin = profile?.role === 'admin';
@@ -108,6 +108,9 @@ const Header = () => {
                       <Link to="/provider/schedule" className={getLinkClasses("/provider/schedule")} style={getLinkStyle("/provider/schedule")}>
                         Schedule
                       </Link>
+                      <Link to="/provider/messages" className={getLinkClasses("/provider/messages")} style={getLinkStyle("/provider/messages")}>
+                        Messages
+                      </Link>
                       <Link to="/provider/profile" className={getLinkClasses("/provider/profile")} style={getLinkStyle("/provider/profile")}>
                         Business Profile
                       </Link>
@@ -118,12 +121,19 @@ const Header = () => {
                     {user && (<Link to="/services" className={getLinkClasses("/services")} style={getLinkStyle("/services")}>
                       Services
                     </Link>)}
-                    {/* <Link to="/providers" className={getLinkClasses("/providers")} style={getLinkStyle("/providers")}>
-                      Providers
-                    </Link> */}
+                    {user && isClient && (
+                      <Link to="/providers" className={getLinkClasses("/providers")} style={getLinkStyle("/providers")}>
+                        Providers
+                      </Link>
+                    )}
                     {user && (
                       <Link to="/bookings" className={getLinkClasses("/bookings")} style={getLinkStyle("/bookings")}>
                         My Bookings
+                      </Link>
+                    )}
+                    {user && isClient && (
+                      <Link to="/messages" className={getLinkClasses("/messages")} style={getLinkStyle("/messages")}>
+                        Messages
                       </Link>
                     )}
                     {user && isClient && (
@@ -141,6 +151,54 @@ const Header = () => {
               </>
             )}
           </nav>
+
+          {/* Mobile hamburger — visible below md */}
+          {!loading && (
+            <div className="flex md:hidden items-center">
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label="Open navigation">
+                    <Menu className="w-6 h-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 pt-8">
+                  <nav className="flex flex-col space-y-4">
+                    {isAdminRoute ? (
+                      isAdmin && (
+                        <>
+                          <Link to="/admin/dashboard" className={getLinkClasses("/admin/dashboard")} style={getLinkStyle("/admin/dashboard")} onClick={() => setMobileOpen(false)}>Dashboard</Link>
+                          <Link to="/admin/users" className={getLinkClasses("/admin/users")} style={getLinkStyle("/admin/users")} onClick={() => setMobileOpen(false)}>Users</Link>
+                          <Link to="/admin/settings" className={getLinkClasses("/admin/settings")} style={getLinkStyle("/admin/settings")} onClick={() => setMobileOpen(false)}>Settings</Link>
+                        </>
+                      )
+                    ) : isProviderRoute ? (
+                      isProvider && (
+                        <>
+                          <Link to="/provider/dashboard" className={getLinkClasses("/provider/dashboard")} style={getLinkStyle("/provider/dashboard")} onClick={() => setMobileOpen(false)}>Dashboard</Link>
+                          <Link to="/provider/services" className={getLinkClasses("/provider/services")} style={getLinkStyle("/provider/services")} onClick={() => setMobileOpen(false)}>My Services</Link>
+                          <Link to="/provider/bookings" className={getLinkClasses("/provider/bookings")} style={getLinkStyle("/provider/bookings")} onClick={() => setMobileOpen(false)}>Appointments</Link>
+                          <Link to="/provider/schedule" className={getLinkClasses("/provider/schedule")} style={getLinkStyle("/provider/schedule")} onClick={() => setMobileOpen(false)}>Schedule</Link>
+                          <Link to="/provider/messages" className={getLinkClasses("/provider/messages")} style={getLinkStyle("/provider/messages")} onClick={() => setMobileOpen(false)}>Messages</Link>
+                          <Link to="/provider/profile" className={getLinkClasses("/provider/profile")} style={getLinkStyle("/provider/profile")} onClick={() => setMobileOpen(false)}>Business Profile</Link>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        {user && <Link to="/services" className={getLinkClasses("/services")} style={getLinkStyle("/services")} onClick={() => setMobileOpen(false)}>Services</Link>}
+                        {user && isClient && <Link to="/providers" className={getLinkClasses("/providers")} style={getLinkStyle("/providers")} onClick={() => setMobileOpen(false)}>Providers</Link>}
+                        {user && <Link to="/bookings" className={getLinkClasses("/bookings")} style={getLinkStyle("/bookings")} onClick={() => setMobileOpen(false)}>My Bookings</Link>}
+                        {user && isClient && <Link to="/messages" className={getLinkClasses("/messages")} style={getLinkStyle("/messages")} onClick={() => setMobileOpen(false)}>Messages</Link>}
+                        {user && isClient && <Link to="/profile" className={getLinkClasses("/profile")} style={getLinkStyle("/profile")} onClick={() => setMobileOpen(false)}>Profile</Link>}
+                        {user && <Link to={isProvider ? "/provider/dashboard" : "/dashboard"} className={getLinkClasses(isProvider ? "/provider/dashboard" : "/dashboard")} style={getLinkStyle(isProvider ? "/provider/dashboard" : "/dashboard")} onClick={() => setMobileOpen(false)}>Dashboard</Link>}
+                        {!user && <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium" onClick={() => setMobileOpen(false)}>Sign In</Link>}
+                        {!user && <Link to="/register" className="text-gray-600 hover:text-gray-900 font-medium" onClick={() => setMobileOpen(false)}>Sign Up</Link>}
+                      </>
+                    )}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
@@ -229,6 +287,18 @@ const Header = () => {
                     <DropdownMenuItem onClick={() => navigate('/bookings')}>
                       <CalendarToday className="mr-2 h-4 w-4" />
                       My Bookings
+                    </DropdownMenuItem>
+                  )}
+                  {!isProviderRoute && !isAdminRoute && isClient && (
+                    <DropdownMenuItem onClick={() => navigate('/messages')}>
+                      <Chat className="mr-2 h-4 w-4" />
+                      Messages
+                    </DropdownMenuItem>
+                  )}
+                  {isProviderRoute && isProvider && (
+                    <DropdownMenuItem onClick={() => navigate('/provider/messages')}>
+                      <Chat className="mr-2 h-4 w-4" />
+                      Messages
                     </DropdownMenuItem>
                   )}
                   

@@ -61,6 +61,7 @@ export interface Service {
   requirements: string[];
   tags: string[];
   slots?: string[];
+  imageUrl?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -78,6 +79,7 @@ export interface ServiceProvider {
   category?: ServiceCategory;
   subcategory?: string;
   profilePhoto?: string;
+  businessImage?: string;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   services: Service[];
   averageRating?: number;
@@ -106,10 +108,41 @@ export interface ProviderSchedule {
   updatedAt: string;
 }
 
+export interface Review {
+  _id: string;
+  bookingId: string;
+  clientId: { _id: string; fullName: string } | string;
+  providerId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface Conversation {
+  _id: string;
+  clientId: { _id: string; fullName: string; email: string } | string;
+  providerId: { _id: string; businessName: string; profilePhoto?: string } | string;
+  lastMessage: string;
+  lastMessageAt: string;
+  clientUnread: number;
+  providerUnread: number;
+}
+
+export interface Message {
+  _id: string;
+  conversationId: string;
+  senderId: string;
+  senderRole: 'client' | 'provider';
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
 class ApiService {
   private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
   
   // Helper method to make HTTP requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
     
@@ -274,6 +307,20 @@ class ApiService {
     return data.provider;
   }
 
+  async uploadBusinessImage(file: File): Promise<{ message: string; businessImage: string }> {
+    const formData = new FormData();
+    formData.append('businessImage', file);
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${this.baseUrl}/provider/business-image`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token ?? ''}` },
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to upload business image');
+    return data;
+  }
+
   // Provider Services
   async getProviderServices(): Promise<Service[]> {
     const response = await this.makeRequest('/provider/services');
@@ -396,6 +443,51 @@ class ApiService {
     await this.makeRequest(`/provider/schedule/${dayOfWeek}`, {
       method: 'DELETE',
     });
+  }
+
+  // Reviews
+  async submitReview(providerId: string, rating: number, comment?: string, bookingId?: string): Promise<Review> {
+    const response = await this.makeRequest('/reviews', {
+      method: 'POST',
+      body: JSON.stringify({ providerId, rating, comment: comment || '', ...(bookingId ? { bookingId } : {}) }),
+    });
+    return response.review;
+  }
+
+  async getProviderReviews(providerId: string): Promise<{ reviews: Review[]; averageRating: number; totalReviews: number }> {
+    return await this.makeRequest(`/reviews/provider/${providerId}`);
+  }
+
+  async getMyReviewForProvider(providerId: string): Promise<Review | null> {
+    const response = await this.makeRequest(`/reviews/my/${providerId}`);
+    return response.review;
+  }
+
+  // Chat
+  async getConversations(): Promise<Conversation[]> {
+    const response = await this.makeRequest('/chat/conversations');
+    return response.conversations;
+  }
+
+  async getOrCreateConversation(providerId: string): Promise<Conversation> {
+    const response = await this.makeRequest('/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ providerId }),
+    });
+    return response.conversation;
+  }
+
+  async getMessages(conversationId: string): Promise<Message[]> {
+    const response = await this.makeRequest(`/chat/conversations/${conversationId}/messages`);
+    return response.messages;
+  }
+
+  async sendMessage(conversationId: string, content: string): Promise<Message> {
+    const response = await this.makeRequest(`/chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+    return response.message;
   }
 }
 
