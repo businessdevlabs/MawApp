@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +9,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCreateBooking } from '@/hooks/useBookings';
 import { useToast } from '@/hooks/use-toast';
 import TimeSlotPicker from './TimeSlotPicker';
+import apiService from '@/services/api';
 import { CalendarToday, Schedule, LocationOn, Person, AttachMoney } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { format, startOfDay, isBefore } from 'date-fns';
 
 interface DayHours {
   open: string;
@@ -51,6 +51,22 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
   const [selectedTime, setSelectedTime] = useState<string>();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState<{ startTime: string; endTime: string }[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  // Fetch booked slots whenever the date changes
+  useEffect(() => {
+    if (!selectedDate || !service.providerId._id) return;
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    setLoadingAvailability(true);
+    setSelectedTime(undefined); // reset time when date changes
+    apiService.getProviderAvailability(service.providerId._id, dateStr)
+      .then(setBookedSlots)
+      .catch(() => setBookedSlots([]))
+      .finally(() => setLoadingAvailability(false));
+  }, [selectedDate, service.providerId._id]);
+
+  const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
   const handleSubmit = async () => {
     if (!user || !selectedDate || !selectedTime) {
@@ -64,6 +80,23 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
 
     setIsSubmitting(true);
 
+    const today = startOfDay(new Date());
+    if (isBefore(selectedDate, today)) {
+      toast({ title: 'Invalid date', description: 'Please select a future date.', variant: 'destructive' });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (bookedSlots.some(({ startTime, endTime }) => {
+      const slotStartMin = toMinutes(selectedTime);
+      const slotEndMin = slotStartMin + service.duration;
+      return slotStartMin < toMinutes(endTime) && slotEndMin > toMinutes(startTime);
+    })) {
+      toast({ title: 'Slot unavailable', description: 'This time slot is already booked.', variant: 'destructive' });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       await createBooking.mutateAsync({
         provider_id: service.providerId._id,
@@ -72,7 +105,7 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
         appointment_time: selectedTime,
         duration_minutes: service.duration,
         total_price: service.price,
-        notes: notes || undefined,
+        notes: notes.trim() || undefined,
       });
 
       toast({
@@ -86,7 +119,6 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
         navigate('/dashboard');
       }
     } catch (error) {
-      console.error('Booking error:', error);
       toast({
         title: "Booking Failed",
         description: "Something went wrong. Please try again.",
@@ -112,6 +144,8 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
           onTimeSelect={setSelectedTime}
           duration={service.duration}
           businessHours={service.providerId.businessHours}
+          bookedSlots={bookedSlots}
+          loadingAvailability={loadingAvailability}
         />
       </div>
 
@@ -136,16 +170,16 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
             <h4 className="text-sm font-medium text-gray-900 mb-3">Appointment Summary</h4>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-700">
-                <CalendarToday className="w-4 h-4" style={{color: '#025bae'}} />
+                <CalendarToday className="w-4 h-4 text-primary" />
                 <span>{format(selectedDate, 'EEEE, MMMM do, yyyy')}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-700">
-                <Schedule className="w-4 h-4" style={{color: '#025bae'}} />
+                <Schedule className="w-4 h-4 text-primary" />
                 <span>{selectedTime} ({service.duration} minutes)</span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-900">Total:</span>
-                <span className="text-lg font-bold" style={{color: '#025bae'}}>${service.price}</span>
+                <span className="text-lg font-bold text-primary">${service.price}</span>
               </div>
             </div>
           </div>
@@ -154,9 +188,8 @@ const BookingForm = ({ service, onSuccess }: BookingFormProps) => {
         <Button
           onClick={handleSubmit}
           disabled={!selectedDate || !selectedTime || isSubmitting}
-          className="w-full"
+          className="w-full bg-primary"
           size="lg"
-          style={{backgroundColor: '#025bae'}}
         >
           {isSubmitting ? 'Booking...' : 'Book Appointment'}
         </Button>

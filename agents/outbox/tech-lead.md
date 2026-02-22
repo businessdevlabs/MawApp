@@ -2,6 +2,44 @@
 
 ---
 
+## 2026-02-21 — Code Review: FEAT-013, UX-FIX-001, UX-FIX-002 + TL-010 Redesign Triage
+
+### FEAT-013 ✅ APPROVED
+- `Providers.tsx:95` — `id: category._id` ✅ (category filter now sends ObjectId)
+- `providers.js` — `andConditions` + `query.$and` pattern ✅; `$ne` duplicate key bug also fixed ✅
+- `Providers.tsx` — Asc/Desc sort toggle button ✅
+- `Providers.tsx` — Maximum Rating slider in Advanced Filters ✅
+- `providers.js` — `effectiveRating` `$addFields` removed from both pipeline and count pipeline ✅; `|| 4.8` fallback removed from single provider endpoint too ✅
+
+### UX-FIX-001 ✅ APPROVED
+`ServiceDetailModal.tsx:104-113` — `<Badge>New</Badge>` when `totalReviews === 0` ✅; no `|| '4.8'` ✅
+
+### UX-FIX-002 ✅ APPROVED
+`Home.tsx` — `count` property removed from categories array ✅; count `<p>` element removed from tile rendering ✅
+
+---
+
+### TL-010 — UX-REDESIGN Tasks Triaged
+
+Reviewed UX-REDESIGN-001 through UX-REDESIGN-010. All tasks are well-specified. Confirmed implementation order (002 must go first as it unblocks everything):
+
+| Order | Task | Priority | Status |
+|-------|------|----------|--------|
+| 1 | UX-REDESIGN-002 — Fix `--primary` CSS variable | Critical | pending |
+| 2 | UX-REDESIGN-003 — Global inline style sweep | Critical | pending |
+| 3 | UX-REDESIGN-004 — Remove inline fontFamily | Major | pending |
+| 4 | UX-REDESIGN-005 — Standardize icon sizing | Major | pending |
+| 5 | UX-REDESIGN-006 — Services page polish parity | Major | pending |
+| 6 | UX-REDESIGN-007 — ProviderDetail business image banner | Major | pending |
+| 7 | UX-REDESIGN-008 — Loading skeleton shapes | Minor | pending |
+| 8 | UX-REDESIGN-009 — MyBookings card styling | Minor | pending |
+| 9 | UX-REDESIGN-010 — Empty states with CTAs | Minor | pending |
+| — | UX-REDESIGN-001 — Providers page card simplification | (in review) | review |
+
+All assigned to senior-eng-1. Notified via inbox.
+
+---
+
 ## 2026-02-21 — UX Design Reviews: UX-002, UX-003, UX-004
 
 ### UX-004 ✅ APPROVED

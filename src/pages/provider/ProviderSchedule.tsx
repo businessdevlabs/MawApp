@@ -35,6 +35,7 @@ const ProviderSchedule = () => {
   const { toast } = useToast();
 
   const [scheduleTab, setScheduleTab] = useState('manual');
+  const [timeErrors, setTimeErrors] = useState<Record<string, string>>({});
 
   interface TimeSlot {
     startTime: string;
@@ -105,7 +106,25 @@ const ProviderSchedule = () => {
         ...updatedTimeSlots[slotIndex],
         [field]: value
       };
-      
+
+      // Inline end-time validation
+      const key = `${dayOfWeek}-${slotIndex}`;
+      const slot = updatedTimeSlots[slotIndex];
+      if (field === 'endTime') {
+        if (value <= slot.startTime) {
+          setTimeErrors(prev => ({ ...prev, [key]: 'End time must be after start time' }));
+        } else {
+          setTimeErrors(prev => ({ ...prev, [key]: '' }));
+        }
+      } else if (field === 'startTime') {
+        // Re-validate existing endTime when startTime changes
+        if (slot.endTime <= value) {
+          setTimeErrors(prev => ({ ...prev, [key]: 'End time must be after start time' }));
+        } else {
+          setTimeErrors(prev => ({ ...prev, [key]: '' }));
+        }
+      }
+
       return {
         ...prev,
         [dayOfWeek]: {
@@ -163,6 +182,36 @@ const ProviderSchedule = () => {
   };
 
   const handleSaveSchedule = async () => {
+    // Block save if there are inline time errors
+    if (Object.values(timeErrors).some(e => e !== '')) {
+      toast({
+        title: "Invalid times",
+        description: "Please fix the time errors before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for overlapping time slots on the same day
+    for (const day of DAYS_OF_WEEK) {
+      const dayData = scheduleData[day.value];
+      if (dayData.isAvailable) {
+        const slots = dayData.timeSlots;
+        for (let i = 0; i < slots.length; i++) {
+          for (let j = i + 1; j < slots.length; j++) {
+            if (slots[i].startTime < slots[j].endTime && slots[j].startTime < slots[i].endTime) {
+              toast({
+                title: "Schedule overlap",
+                description: "Schedule slots overlap — please fix conflicts before saving.",
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+        }
+      }
+    }
+
     // Validate that end time is after start time for all active days
     for (const day of DAYS_OF_WEEK) {
       const dayData = scheduleData[day.value];
@@ -215,7 +264,6 @@ const ProviderSchedule = () => {
 
       // If profile is complete and schedule is now set but services are not set, navigate to services
       if (hasProfile && hasSchedule && !hasServices) {
-        console.log('Provider setup: Navigating from schedule (step 2) to services (step 3)');
         setTimeout(() => {
           navigate('/provider/services');
         }, 1500); // Small delay to show success message
@@ -231,8 +279,6 @@ const ProviderSchedule = () => {
   };
 
   const handleAIScheduleGenerated = async (generatedSchedule: any) => {
-    console.log('Received AI provider schedule:', generatedSchedule);
-    
     // Convert AI-generated schedule to the new multiple time slots format
     const convertedScheduleData: Record<number, DaySchedule> = {};
 
@@ -277,8 +323,6 @@ const ProviderSchedule = () => {
       }
     });
 
-    console.log('Converted provider schedule:', convertedScheduleData);
-    
     // Update the schedule data
     setScheduleData(convertedScheduleData);
 
@@ -314,7 +358,6 @@ const ProviderSchedule = () => {
       ));
 
       if (hasProfile && hasSchedule && !hasServices) {
-        console.log('Provider setup: Navigating from AI schedule to services');
         setTimeout(() => {
           navigate('/provider/services');
         }, 1500);
@@ -448,30 +491,35 @@ const ProviderSchedule = () => {
                       {scheduleData[day.value]?.isAvailable && (
                         <div className="space-y-2">
                           {scheduleData[day.value].timeSlots.map((slot, slotIndex) => (
-                            <div key={slotIndex} className="flex items-center space-x-2 p-2 bg-white rounded border">
-                              <Input
-                                type="time"
-                                value={slot.startTime}
-                                onChange={(e) => handleTimeSlotChange(day.value, slotIndex, 'startTime', e.target.value)}
-                                className="w-32"
-                              />
-                              <span className="text-gray-500">to</span>
-                              <Input
-                                type="time"
-                                value={slot.endTime}
-                                onChange={(e) => handleTimeSlotChange(day.value, slotIndex, 'endTime', e.target.value)}
-                                className="w-32"
-                              />
-                              {scheduleData[day.value].timeSlots.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => removeTimeSlot(day.value, slotIndex)}
-                                  className="text-red-600 border-red-200 hover:bg-red-50 ml-2"
-                                >
-                                  <Remove className="w-4 h-4" />
-                                </Button>
+                            <div key={slotIndex} className="p-2 bg-white rounded border">
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  type="time"
+                                  value={slot.startTime}
+                                  onChange={(e) => handleTimeSlotChange(day.value, slotIndex, 'startTime', e.target.value)}
+                                  className="w-32"
+                                />
+                                <span className="text-gray-500">to</span>
+                                <Input
+                                  type="time"
+                                  value={slot.endTime}
+                                  onChange={(e) => handleTimeSlotChange(day.value, slotIndex, 'endTime', e.target.value)}
+                                  className={`w-32 ${timeErrors[`${day.value}-${slotIndex}`] ? 'border-red-500' : ''}`}
+                                />
+                                {scheduleData[day.value].timeSlots.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeTimeSlot(day.value, slotIndex)}
+                                    className="text-red-600 border-red-200 hover:bg-red-50 ml-2"
+                                  >
+                                    <Remove className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              {timeErrors[`${day.value}-${slotIndex}`] && (
+                                <p className="text-sm text-red-500 mt-1">{timeErrors[`${day.value}-${slotIndex}`]}</p>
                               )}
                             </div>
                           ))}

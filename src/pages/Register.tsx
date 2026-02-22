@@ -70,16 +70,19 @@ const Register = () => {
       return;
     }
 
+    if (formData.name.trim().length < 2) {
+      toast({
+        title: 'Name too short',
+        description: 'Name must be at least 2 characters.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      console.log('Attempting registration with data:', {
-        email: formData.email,
-        name: formData.name,
-        role: formData.role
-      });
-
-      await register(formData.email, formData.password, formData.name, formData.role);
+      await register(formData.email.trim().toLowerCase(), formData.password, formData.name.trim(), formData.role);
       
       toast({
         title: "Account created!",
@@ -88,7 +91,6 @@ const Register = () => {
       
       // Don't navigate here - let the useEffect handle it after user state is set
     } catch (error: any) {
-      console.error('Registration error details:', error);
       
       let errorMessage = "Please try again with different credentials.";
       
@@ -120,7 +122,7 @@ const Register = () => {
             </div>
           </div>
           <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="text-gray-600">Get started with BookEase today</p>
+          <p className="text-gray-600">Get started with Zenith today</p>
         </div>
 
         <Card className="shadow-xl border-0">

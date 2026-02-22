@@ -113,7 +113,7 @@ const Profile = () => {
     setValue,
     getValues,
     reset,
-    formState: { isDirty, isSubmitting }
+    formState: { isDirty, isSubmitting, errors }
   } = useForm<ProfileFormData>({
     defaultValues: {
       fullName: '',
@@ -171,14 +171,6 @@ const Profile = () => {
     try {
       const scheduleArray = convertScheduleSlotsToArray(data.scheduleSlots);
 
-      console.log('Form data before submit:', data);
-      console.log('Submitting profile update:', {
-        fullName: data.fullName,
-        phone: data.phone,
-        address: data.address,
-        schedule: scheduleArray
-      });
-
       await updateProfile.mutateAsync({
         fullName: data.fullName,
         phone: data.phone,
@@ -203,7 +195,6 @@ const Profile = () => {
   };
 
   const handleAIScheduleGenerated = async (generatedSchedule: Record<string, TimeRange[]>) => {
-    console.log('Received AI schedule in Profile:', generatedSchedule);
 
     // Convert AI-generated schedule to the form format
     const convertedSchedule: ScheduleSlots = {};
@@ -221,8 +212,6 @@ const Profile = () => {
       }
     });
 
-    console.log('Converted schedule:', convertedSchedule);
-    
     // Update the form with the new schedule
     setValue('scheduleSlots', convertedSchedule, { shouldDirty: true });
 
@@ -389,19 +378,32 @@ const Profile = () => {
                     <Label htmlFor="phone">{t('profile.phone')}</Label>
                     <Input
                       id="phone"
-                      {...register('phone')}
+                      {...register('phone', {
+                        pattern: {
+                          value: /^[+\d\s()\-]{7,20}$/,
+                          message: 'Enter a valid phone number',
+                        },
+                      })}
                       placeholder="Enter your phone number"
                     />
+                    {errors.phone && (
+                      <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
+                    )}
                   </div>
 
                   {/* Address */}
                   <div className="space-y-2">
-                    <Label htmlFor="address">{t('profile.businessAddress')}</Label>
+                    <Label htmlFor="address">Address</Label>
                     <Input
                       id="address"
-                      {...register('address')}
+                      {...register('address', {
+                        minLength: { value: 5, message: 'Enter a complete address' },
+                      })}
                       placeholder="Enter your address"
                     />
+                    {errors.address && (
+                      <p className="text-sm text-red-500 mt-1">{errors.address.message}</p>
+                    )}
                   </div>
 
                   {/* Account Information */}

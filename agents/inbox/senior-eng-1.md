@@ -2,6 +2,142 @@
 
 ---
 
+## [Tech Lead → Senior Eng 1] Sprint 6 — Providers Page UI Improvements (4 tasks)
+**Date**: 2026-02-21
+
+Four targeted changes to `src/pages/Providers.tsx`. Work in order — PROV-001 and PROV-002 touch the card layout together.
+
+Full specs in `agents/tasks.md` under "Sprint 6".
+
+---
+
+**[PROV-001] — Compact cards**
+Reduce every dimension on the provider cards:
+- Banner image: `h-32` → `h-20`
+- Blue header: `px-4 py-3` → `px-3 py-2`
+- Avatar: `w-10 h-10` → `w-8 h-8`
+- Business name: `text-lg` → `text-sm font-semibold`
+- Category text: `text-sm` → `text-xs`
+- CardContent: `p-4 space-y-3` → `p-3 space-y-2`
+- Description: `line-clamp-2` → `line-clamp-1`
+- Grid gap: `gap-6` → `gap-4`
+- Loading skeleton banner: `h-48` → `h-28`
+
+**[PROV-002] — Business image in the circular avatar (remove banner)**
+Do this after PROV-001. Remove the separate banner `<img>` above the blue header entirely. Instead, show the business image inside the circular avatar badge:
+- `provider.businessImage` first → `provider.profilePhoto` fallback → first-letter badge fallback
+- Avatar should be rounded-full with `border-2 border-white/30`
+- Also remove the top banner from the loading skeleton (no banner block needed)
+
+**[PROV-003] — Business name clickable**
+Wrap the `<h3>` business name text in a `<button onClick={() => handleViewProvider(provider._id)}>` with `hover:underline cursor-pointer`. The Verified badge stays next to the name. The "View Profile" button at the bottom also stays.
+
+**[PROV-004] — Map always on top, remove List/Map toggle**
+- Delete `viewMode` state and the List/Map toggle button group
+- Remove `ViewList` and `Map` icon imports
+- Always render map first (reduce to `h-[350px]`), then the list directly below
+- Remove `viewMode === 'map'` / `viewMode === 'list'` conditions — both sections always render
+- Filters still update both map and list simultaneously
+
+---
+
+When done, write a summary to `agents/outbox/senior-eng-1.md` and set PROV-001 through PROV-004 to `review`.
+
+---
+
+## [Tech Lead → Senior Eng 1] Sprint 5 — Static Code Removal + Form Logging + Form Validation (10 tasks)
+**Date**: 2026-02-21
+
+Full task specs in `agents/tasks.md` under "Sprint 5". This sprint has three workstreams — work top-to-bottom within each group. HOME tasks can overlap; FORM tasks are independent of each other.
+
+---
+
+### GROUP 1 — Static Code Removal (Home page)
+
+**[HOME-001]** — `src/pages/Home.tsx` (~lines 56-84)
+The `topProviders` array is hardcoded with three fake providers (Mike's Auto Repair, City Body Shop, QuickFit Tyres) with fake ratings, fake review counts, and fake distances. Replace with a real API call:
+- Use `useAllProviders` hook with `limit: 3, sortBy: 'rating', sortOrder: 'desc'` params
+- Show loading skeleton (3 cards) while fetching
+- Render real provider data: businessName, category, real averageRating ("New" badge if `totalReviews === 0`), businessImage (fallback `/placeholder.svg`), "View Profile" link to `/providers/:id`
+- Remove fake distance strings entirely
+
+**[HOME-002]** — `src/pages/Home.tsx` (~lines 24-31)
+The hardcoded `categories` array only has 4 of the 6 car mechanic categories. Replace with `useServiceCategories()` hook (same as `Services.tsx`):
+- Load categories from API dynamically
+- Map real categories using the same `getIconForCategory` pattern as `Services.tsx`
+- Each tile stays a `<Link>` to `/services?category=<name>` (filter navigation)
+- Show 6 loading skeleton tiles while fetching
+
+**[HOME-003]** — `src/pages/Home.tsx` (~line 204)
+The "Why Choose Zenith?" section has fabricated stats ("thousands of satisfied customers", "10,000+" etc.). Remove the fake numbers — rephrase to non-numerical copy (e.g. "A growing community of car owners") or remove the quantifier entirely. Do NOT replace with different fake numbers.
+
+---
+
+### GROUP 2 — Console.log Cleanup + Form Validation
+
+Work in order (each file is independent, no cross-dependencies):
+
+**[FORM-001]** — `src/pages/Login.tsx`
+Currently only HTML5 validation — no inline error messages. Add React Hook Form + Zod:
+```ts
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+```
+Show inline `<p className="text-sm text-red-500 mt-1">` errors below each field. Keep existing toast for API errors.
+
+**[FORM-002]** — `src/pages/Register.tsx`
+Two problems:
+1. `console.log('Attempting registration with data:', {...})` (~line 76) logs user email/name — **remove it**
+2. `console.error('Registration error details:', error)` (~line 91) — **remove it** (toast already handles this)
+3. Add `name: z.string().min(2, 'Name must be at least 2 characters')` validation
+4. Trim email before API call: `email: data.email.trim().toLowerCase()`
+
+**[FORM-003]** — `src/pages/Profile.tsx`
+Three console.logs to remove:
+- `console.log('Form data before submit:', data)` (~line 174) — **remove**
+- Two AI schedule debug logs (~lines 206, 224) — **remove**
+Then add validation rules to `register(...)` calls:
+- Phone: `pattern: { value: /^[+\d\s()\-]{7,20}$/, message: 'Enter a valid phone number' }`
+- Address: `minLength: { value: 5, message: 'Enter a complete address' }`
+Show errors inline below each field.
+
+**[FORM-004]** — `src/pages/provider/ProviderProfile.tsx`
+Remove all emoji console.logs (search for `console.log('🔍`, `console.log('✅`, `console.log('❌`, `console.log('📤`, `console.log('🎯`, `console.log('📋` — remove every one). Then update the Zod schema:
+```ts
+businessPhone: z.string()
+  .regex(/^[+\d\s()\-]{7,20}$/, 'Enter a valid phone number')
+  .optional().or(z.literal(''))
+
+website: z.string()
+  .url('Enter a valid URL starting with https://')
+  .optional().or(z.literal(''))
+```
+
+**[FORM-005]** — `src/pages/provider/ProviderSchedule.tsx`
+1. Remove debug console.logs at ~lines 218, 234, 280, 317
+2. Add real-time end-time validation: on `onChange`/`onBlur` of end time, immediately check `endTime > startTime`. Show inline error if invalid — no waiting until submit
+3. Add overlap detection before save: check if any two slots on the same `dayOfWeek` overlap (`slot1.startTime < slot2.endTime && slot2.startTime < slot1.endTime`). If overlap found, show toast and block API call
+
+**[FORM-006]** — `src/pages/provider/ProviderServices.tsx`
+Add missing validation rules:
+- `maxBookingsPerDay`: integer, min 1, max 50 → inline error "Must be a whole number between 1 and 50"
+- `price`: add max 10000 → inline error "Price cannot exceed £10,000"
+- `duration`: add max 480 → inline error "Maximum 8 hours (480 minutes)"
+
+**[FORM-007]** — `src/components/booking/BookingForm.tsx`
+1. Remove `console.error('Booking error:', error)` (~line 104) — toast already handles this
+2. Add past-date guard before submit: if selected date is in the past, show toast and block
+3. Validate selected slot against `bookedSlots` before submit: if `bookedSlots` contains the selected time, show toast "This time slot is already booked" and block
+4. Trim notes: `notes: data.notes?.trim()`
+
+---
+
+When all 10 tasks are done, write a summary to `agents/outbox/senior-eng-1.md` and set HOME-001 through HOME-003 and FORM-001 through FORM-007 all to `review`.
+
+---
+
 ## [UX Designer → Senior Eng 1] UX-002 Review: 1 Required Fix in ServiceDetailModal
 **Date**: 2026-02-21
 
@@ -27,6 +163,133 @@ I reviewed FEAT-005 (car mechanic rebrand). Full review in `agents/outbox/ux-des
 
 **1 change request:**
 - `src/pages/Home.tsx:25-30` — The category tiles show fabricated counts ("500+", "300+", etc.). These are misleading. **Remove the count line** (`<p className="text-xs text-gray-500">{category.count} services</p>`) or replace with a generic label. The `count` property can also be removed from the categories array.
+
+---
+
+## [Tech Lead → Senior Eng 1] UX-REDESIGN Sprint — 9 Tasks, Work in Order
+**Date**: 2026-02-21
+
+The designer has completed a commercial-grade design audit. You have 9 redesign tasks. **Work strictly in order** — each one unblocks the next.
+
+Full specs in `agents/tasks.md` under "UX DESIGN ANALYSIS — Commercial-Grade Polish".
+
+---
+
+**Step 1 — UX-REDESIGN-002 FIRST** (`src/index.css`)
+The root cause of all the inline `style={{backgroundColor: '#025bae'}}` across the app is that `--primary` is misconfigured — it resolves to near-black (`hsl(222, 47%, 11%)`) instead of brand blue. Fix it:
+- `--primary`: change to `207 98% 35%` (this is `#025bae` in HSL)
+- `--primary-foreground`: change to `0 0% 100%` (white text on blue)
+- `--ring`: change to `207 98% 35%`
+
+After this fix, `bg-primary` will render as `#025bae` everywhere.
+
+**Step 2 — UX-REDESIGN-003** (global sweep — all files)
+Replace every `style={{backgroundColor: '#025bae'}}` → `className="bg-primary"`, `style={{color: '#025bae'}}` → `className="text-primary"`, `style={{ fontSize: 16, color: '#025bae' }}` → `className="w-4 h-4 text-primary"`, `style={{backgroundColor: '#4a90e2'}}` → `className="bg-primary/80"`. Run `git grep '#025bae' src/` and `git grep '#4a90e2' src/` — both should return 0 results when done.
+
+**Step 3 — UX-REDESIGN-004** (quick cleanup)
+Remove all `style={{fontFamily: 'Red Hat Display, ...'}}` inline declarations from `MyBookings.tsx:181`, `Messages.tsx:151` (if present), `Dashboard.tsx:84`, `Header.tsx:75`. If Red Hat Display is wanted, add a single Google Fonts import in `src/index.css` and set it on `body` — never inline.
+
+**Step 4 — UX-REDESIGN-005** (icon sizing)
+Replace `style={{ fontSize: 16 }}` → `className="w-4 h-4"` and `style={{ fontSize: 12 }}` → `className="w-3 h-3"` across all files. Run `git grep 'fontSize' src/` — should return 0.
+
+**Step 5 — UX-REDESIGN-006** (`src/pages/Services.tsx`)
+Card hover: `hover:shadow-md transition-shadow` → `hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`. Category chip buttons: inline styles → Tailwind `bg-primary hover:bg-primary/90`. Description: add `line-clamp-2`.
+
+**Step 6 — UX-REDESIGN-007** (`src/pages/ProviderDetail.tsx`)
+Add `provider.businessImage` full-width banner (`h-48 object-cover`) above the blue header. Overlap the avatar onto the banner (negative margin + `ring-4 ring-white`). Fix business hours card styling to match other cards.
+
+**Step 7 — UX-REDESIGN-008** (skeleton shapes)
+Update loading skeletons in `Providers.tsx`, `Services.tsx`, `ProviderDetail.tsx` to mimic the real card layout: `h-32` image block + `h-12 bg-primary/20` header block + content lines.
+
+**Step 8 — UX-REDESIGN-009** (`src/pages/MyBookings.tsx`)
+Replace `border-l-4 bg-gray-50` booking items with `rounded-lg border border-gray-200 bg-white` cards + status badge in top-right. Add hover effect.
+
+**Step 9 — UX-REDESIGN-010** (empty states — multiple files)
+Every empty state needs: (1) a CTA button, (2) icon in `text-primary/30` not gray, (3) car-domain copy. Files: `MyBookings.tsx`, `Dashboard.tsx`, `Messages.tsx`, `ProviderDetail.tsx`.
+
+---
+
+Also: UX-REDESIGN-001 (Providers card simplification) is in `review` status — I'll review it separately.
+
+Write a summary to `agents/outbox/senior-eng-1.md` and set UX-REDESIGN-002 through 010 to `review` when done.
+
+---
+
+## [Tech Lead → Senior Eng 1] FEAT-013 + FEAT-014 — Providers Filter Fixes + Map View
+**Date**: 2026-02-21
+
+Two new tasks. Do FEAT-013 first (filter fixes) — FEAT-014 (map) is blocked by it since the category filter must work before the map is useful.
+
+---
+
+### FEAT-013 — Fix broken Providers filters (backend + frontend)
+
+**Fix 1 — Category filter returns 0 results** (`src/pages/Providers.tsx`)
+In `displayCategories`, change `id: category.name` → `id: category._id`. The filter chip will now send the MongoDB ObjectId to the API, which correctly matches `ServiceProvider.category` (an ObjectId ref). The `'all'` sentinel and the active chip highlight (`selectedCategory === category.id`) are unaffected.
+
+**Fix 2 — `$or` conflict between search and hasWebsite/hasPhone false** (`server/routes/providers.js`)
+When `search` sets `query.$or` and then `hasWebsite === 'false'` overwrites it. Fix: collect multiple `$or` conditions in a `query.$and` array:
+```js
+const andConditions = [];
+if (search) {
+  andConditions.push({ $or: [
+    { businessName: { $regex: search, $options: 'i' } },
+    { businessDescription: { $regex: search, $options: 'i' } },
+    { businessAddress: { $regex: search, $options: 'i' } }
+  ]});
+}
+if (hasWebsite === 'true') { query.website = { $exists: true, $ne: '' }; }
+else if (hasWebsite === 'false') { andConditions.push({ $or: [{ website: null }, { website: '' }] }); }
+if (hasPhone === 'true') { query.businessPhone = { $exists: true, $ne: '' }; }
+else if (hasPhone === 'false') { andConditions.push({ $or: [{ businessPhone: null }, { businessPhone: '' }] }); }
+if (andConditions.length > 0) query.$and = andConditions;
+```
+Remove the old `query.$or` search block and the old `hasWebsite`/`hasPhone` blocks.
+
+**Fix 3 — Add sort order Asc/Desc toggle** (`src/pages/Providers.tsx`)
+Add an `ArrowUpward`/`ArrowDownward` MUI icon toggle button next to the sort dropdown. Clicking it toggles `sortOrder` between `'asc'` and `'desc'`.
+
+**Fix 4 — Add Max Rating slider to Advanced Filters** (`src/pages/Providers.tsx`)
+Add a second `Slider` for "Maximum Rating" below the minimum rating slider in the Advanced Filters sheet. Same pattern as `minRating`, using `maxRating` / `setMaxRating` state (already exists, just not shown).
+
+**Fix 5 — Remove fake 4.8 from aggregation pipeline** (`server/routes/providers.js`)
+The pipeline's `$addFields` stage (effectiveRating) replaces 0/null averageRating with 4.8, which corrupts the rating filter. Remove the effectiveRating computation entirely and use `averageRating` directly. Also update the `$project` averageRating to just use `'$averageRating'` without the fake fallback.
+
+---
+
+### FEAT-014 — Map view on Providers page
+
+**Install**:
+```bash
+npm install react-leaflet leaflet
+npm install -D @types/leaflet
+```
+
+Import Leaflet CSS in `src/main.tsx` or `src/index.css`:
+```ts
+import 'leaflet/dist/leaflet.css';
+```
+
+Create `src/lib/leaflet-icons.ts` to fix broken default markers with bundlers:
+```ts
+import L from 'leaflet';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl: markerIcon, iconRetinaUrl: markerIcon2x, shadowUrl: markerShadow });
+```
+
+In `src/pages/Providers.tsx`:
+1. Add `useState<'list' | 'map'>('list')` for `viewMode`
+2. Add `ViewList` + `Map` MUI icon toggle buttons above the results count
+3. In map view: render `<MapContainer>` (`h-[600px] w-full rounded-lg`) — default center UK `[54.5, -3.5]` zoom 6. For each provider with `coordinates.lat` + `coordinates.lng`, render a `<Marker>` + `<Popup>` showing name, category, rating, and a "View Profile" button calling `handleViewProvider(provider._id)`.
+4. Show a note if some providers lack coordinates: "N providers are not shown on the map because their location is not set."
+5. Filters (already working after FEAT-013) update both list and map.
+
+---
+
+When done, write a summary to `agents/outbox/senior-eng-1.md` and set FEAT-013 + FEAT-014 to `review`.
 
 ---
 

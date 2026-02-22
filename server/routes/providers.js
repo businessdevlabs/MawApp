@@ -24,27 +24,20 @@ router.get('/', authenticateToken, async (req, res) => {
     
     // Build query
     const query = {};
-    
+    const andConditions = [];
+
     // Filter by category if provided
     if (category && category !== 'all') {
       query.category = category;
     }
-    
+
     // Search filter
     if (search) {
-      query.$or = [
+      andConditions.push({ $or: [
         { businessName: { $regex: search, $options: 'i' } },
         { businessDescription: { $regex: search, $options: 'i' } },
         { businessAddress: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Rating filter - simplified approach
-    if (minRating || maxRating) {
-      const minRatingValue = minRating ? parseFloat(minRating) : 0;
-      const maxRatingValue = maxRating ? parseFloat(maxRating) : 5;
-      
-      // Rating filters will be applied in the aggregation pipeline
+      ]});
     }
 
     // Location filter (if searching for specific city/area)
@@ -54,22 +47,20 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Website filter
     if (hasWebsite === 'true') {
-      query.website = { $ne: null, $ne: '' };
+      query.website = { $exists: true, $ne: '' };
     } else if (hasWebsite === 'false') {
-      query.$or = [
-        { website: null },
-        { website: '' }
-      ];
+      andConditions.push({ $or: [{ website: null }, { website: '' }, { website: { $exists: false } }] });
     }
 
     // Phone filter
     if (hasPhone === 'true') {
-      query.businessPhone = { $ne: null, $ne: '' };
+      query.businessPhone = { $exists: true, $ne: '' };
     } else if (hasPhone === 'false') {
-      query.$or = [
-        { businessPhone: null },
-        { businessPhone: '' }
-      ];
+      andConditions.push({ $or: [{ businessPhone: null }, { businessPhone: '' }, { businessPhone: { $exists: false } }] });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     // Build sort object
@@ -103,34 +94,17 @@ router.get('/', authenticateToken, async (req, res) => {
     const pipeline = [
       // Match the basic query first
       { $match: query },
-      
-      // Add computed field for effective rating (use 4.8 if null/undefined/0)
-      {
-        $addFields: {
-          effectiveRating: {
-            $cond: {
-              if: { $or: [
-                { $eq: ['$averageRating', null] },
-                { $eq: ['$averageRating', 0] },
-                { $not: { $ifNull: ['$averageRating', false] } }
-              ]},
-              then: 4.8,
-              else: '$averageRating'
-            }
-          }
-        }
-      },
-      
-      // Apply rating filters on computed field
+
+      // Apply rating filters on averageRating
       ...(minRating || maxRating ? [{
         $match: {
-          effectiveRating: {
+          averageRating: {
             ...(minRating ? { $gte: parseFloat(minRating) } : {}),
             ...(maxRating ? { $lte: parseFloat(maxRating) } : {})
           }
         }
       }] : []),
-      
+
       // Populate references
       {
         $lookup: {
@@ -149,7 +123,7 @@ router.get('/', authenticateToken, async (req, res) => {
           as: 'services'
         }
       },
-      
+
       // Unwind category (since it's a single reference)
       {
         $unwind: {
@@ -157,14 +131,14 @@ router.get('/', authenticateToken, async (req, res) => {
           preserveNullAndEmptyArrays: true
         }
       },
-      
+
       // Add service count
       {
         $addFields: {
           serviceCount: { $size: { $ifNull: ['$services', []] } }
         }
       },
-      
+
       // Project final fields
       {
         $project: {
@@ -177,17 +151,7 @@ router.get('/', authenticateToken, async (req, res) => {
           category: 1,
           services: 1,
           serviceCount: 1,
-          averageRating: {
-            $cond: {
-              if: { $or: [
-                { $eq: ['$averageRating', null] },
-                { $eq: ['$averageRating', 0] },
-                { $not: { $ifNull: ['$averageRating', false] } }
-              ]},
-              then: 4.8,
-              else: '$averageRating'
-            }
-          },
+          averageRating: '$averageRating',
           totalReviews: { $ifNull: ['$totalReviews', 0] },
           coordinates: 1,
           createdAt: 1,
@@ -195,10 +159,10 @@ router.get('/', authenticateToken, async (req, res) => {
           profilePhoto: 1
         }
       },
-      
+
       // Sort
       { $sort: sortObject },
-      
+
       // Pagination
       { $skip: skip },
       { $limit: parseInt(limit) }
@@ -210,24 +174,9 @@ router.get('/', authenticateToken, async (req, res) => {
     // Get total count for pagination (using same base query + rating filters)
     const countPipeline = [
       { $match: query },
-      {
-        $addFields: {
-          effectiveRating: {
-            $cond: {
-              if: { $or: [
-                { $eq: ['$averageRating', null] },
-                { $eq: ['$averageRating', 0] },
-                { $not: { $ifNull: ['$averageRating', false] } }
-              ]},
-              then: 4.8,
-              else: '$averageRating'
-            }
-          }
-        }
-      },
       ...(minRating || maxRating ? [{
         $match: {
-          effectiveRating: {
+          averageRating: {
             ...(minRating ? { $gte: parseFloat(minRating) } : {}),
             ...(maxRating ? { $lte: parseFloat(maxRating) } : {})
           }
@@ -302,7 +251,7 @@ router.get('/:providerId', authenticateToken, async (req, res) => {
       profilePhoto: provider.profilePhoto,
       businessImage: provider.businessImage,
       services: services,
-      averageRating: provider.averageRating || 4.8,
+      averageRating: provider.averageRating,
       totalReviews: provider.totalReviews || 0,
       coordinates: provider.coordinates,
       businessHours: provider.businessHours,

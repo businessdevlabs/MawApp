@@ -445,6 +445,12 @@ class ApiService {
     });
   }
 
+  // Availability
+  async getProviderAvailability(providerId: string, date: string): Promise<{ startTime: string; endTime: string }[]> {
+    const response = await this.makeRequest(`/bookings/availability?providerId=${encodeURIComponent(providerId)}&date=${encodeURIComponent(date)}`);
+    return response.bookedSlots;
+  }
+
   // Reviews
   async submitReview(providerId: string, rating: number, comment?: string, bookingId?: string): Promise<Review> {
     const response = await this.makeRequest('/reviews', {

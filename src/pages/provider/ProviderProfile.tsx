@@ -24,9 +24,13 @@ const profileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
   businessDescription: z.string().min(10, 'Business description must be at least 10 characters'),
   businessAddress: z.string().min(5, 'Business address is required'),
-  businessPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  businessPhone: z.string()
+    .regex(/^[+\d\s()\-]{7,20}$/, 'Enter a valid phone number')
+    .optional().or(z.literal('')),
   businessEmail: z.string().email('Please enter a valid email address').optional(),
-  website: z.string().optional().nullable(),
+  website: z.string()
+    .url('Enter a valid URL starting with https://')
+    .optional().or(z.literal('')),
   category: z.string().optional().nullable(),
   subcategory: z.string().optional().nullable(),
   coordinates: z.object({
@@ -111,8 +115,6 @@ const ProviderProfile = () => {
 
   // Handle category change
   const handleCategoryChange = (categoryId: string) => {
-    console.log('Category changed to:', categoryId);
-
     // Update selected category ID for subcategory fetching
     setSelectedCategoryId(categoryId);
 
@@ -216,7 +218,6 @@ const ProviderProfile = () => {
 
   // Handle map address selection (only updates coordinates, not the address field)
   const handleMapAddressSelect = (address: string, coordinates: { lat: number; lng: number }) => {
-    console.log('Map address selected:', address, coordinates);
     // Only update coordinates, not the address field
     form.setValue('coordinates', coordinates, { shouldDirty: true });
   };
@@ -225,9 +226,6 @@ const ProviderProfile = () => {
   // Form submit handler
   const onSubmit = async (data: ProfileFormData) => {
     try {
-      console.log('🚀 Form submission started');
-      console.log('Form data being submitted:', data);
-
       // Transform data to match API expectations (exclude businessEmail as it's read-only)
       const apiData = {
         businessName: data.businessName,
@@ -242,17 +240,10 @@ const ProviderProfile = () => {
           : undefined
       };
 
-      console.log('API data:', apiData);
-      console.log('Selected photo:', selectedPhoto);
-      console.log('Has photo:', !!selectedPhoto);
-      console.log('Mutation pending:', updateProfile.isPending);
-
-      console.log('🔄 Starting mutation...');
       await updateProfile.mutateAsync({
         profileData: apiData,
         profilePhoto: selectedPhoto || undefined
       });
-      console.log('✅ Mutation completed successfully');
 
       toast({
         title: "Profile updated",
@@ -263,7 +254,6 @@ const ProviderProfile = () => {
       setSelectedPhoto(null);
       setPhotoPreview(null);
     } catch (error) {
-      console.error('Profile update error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update profile. Please try again.",
@@ -338,14 +328,6 @@ const ProviderProfile = () => {
                           )}
                           alt="Profile"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error('Image failed to load:', e.currentTarget.src);
-                            console.log('photoPreview:', photoPreview);
-                            console.log('provider.profilePhoto:', provider?.profilePhoto);
-                          }}
-                          onLoad={() => {
-                            console.log('Image loaded successfully:', photoPreview || provider?.profilePhoto);
-                          }}
                         />
                       ) : (
                         <Business className="w-8 h-8 text-white/70" />

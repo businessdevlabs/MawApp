@@ -1,12 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import {
   Search,
   CalendarToday,
   Star,
   LocationOn,
-  Schedule,
   Build,
   Palette,
   ElectricBolt,
@@ -17,71 +18,56 @@ import {
   ArrowForward
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAllProviders } from '@/hooks/useProvider';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
+
+function getIconForCategory(name: string) {
+  switch (name) {
+    case 'Engine & Mechanical':      return Build;
+    case 'Body & Paint':             return Palette;
+    case 'Electrical & Diagnostics': return ElectricBolt;
+    case 'Tyres & Wheels':           return DonutLarge;
+    case 'Air Conditioning':         return AcUnit;
+    case 'Servicing & MOT':          return Settings;
+    default:                         return Build;
+  }
+}
+
+const features = [
+  {
+    icon: Search,
+    title: 'Easy Discovery',
+    description: 'Find the perfect mechanic or garage based on your location, speciality, and budget.'
+  },
+  {
+    icon: CalendarToday,
+    title: 'Instant Booking',
+    description: 'Book appointments 24/7 with real-time availability and instant confirmation.'
+  },
+  {
+    icon: Star,
+    title: 'Verified Reviews',
+    description: 'Read genuine reviews from verified customers to make informed decisions.'
+  },
+  {
+    icon: CheckCircle,
+    title: 'Secure Payments',
+    description: 'Pay securely with multiple payment options and enjoy purchase protection.'
+  }
+];
 
 const Home = () => {
   const navigate = useNavigate();
 
-  const categories = [
-    { name: 'Engine & Mechanical',     icon: Build        },
-    { name: 'Body & Paint',            icon: Palette      },
-    { name: 'Electrical & Diagnostics', icon: ElectricBolt },
-    { name: 'Tyres & Wheels',          icon: DonutLarge   },
-    { name: 'Air Conditioning',        icon: AcUnit       },
-    { name: 'Servicing & MOT',         icon: Settings     },
-  ];
+  const { data: categoriesData, isLoading: categoriesLoading } = useServiceCategories();
+  const categories = categoriesData?.categories || [];
 
-  const features = [
-    {
-      icon: Search,
-      title: 'Easy Discovery',
-      description: 'Find the perfect mechanic or garage based on your location, speciality, and budget.'
-    },
-    {
-      icon: CalendarToday,
-      title: 'Instant Booking',
-      description: 'Book appointments 24/7 with real-time availability and instant confirmation.'
-    },
-    {
-      icon: Star,
-      title: 'Verified Reviews',
-      description: 'Read genuine reviews from verified customers to make informed decisions.'
-    },
-    {
-      icon: CheckCircle,
-      title: 'Secure Payments',
-      description: 'Pay securely with multiple payment options and enjoy purchase protection.'
-    }
-  ];
-
-  const topProviders = [
-    {
-      id: 1,
-      name: "Mike's Auto Repair",
-      category: "Engine & Mechanical",
-      rating: 4.9,
-      reviews: 312,
-      distance: "0.5 mi",
-      nextAvailable: "Today"
-    },
-    {
-      id: 2,
-      name: "City Body Shop",
-      category: "Body & Paint",
-      rating: 4.8,
-      reviews: 187,
-      distance: "1.2 mi",
-      nextAvailable: "Tomorrow"
-    },
-    {
-      id: 3,
-      name: "QuickFit Tyres",
-      category: "Tyres & Wheels",
-      rating: 4.9,
-      reviews: 254,
-      distance: "0.8 mi",
-      nextAvailable: "Today"
-    }
-  ];
+  const { data: providersData, isLoading: providersLoading } = useAllProviders({
+    limit: 3,
+    sortBy: 'rating',
+    sortOrder: 'desc',
+  });
+  const topProviders = providersData?.providers || [];
 
   return (
     <div className="min-h-screen">
@@ -115,20 +101,30 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Browse by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                to={`/services?category=${encodeURIComponent(category.name)}`}
-                className="group"
-              >
-                <div className="flex flex-col items-center text-center p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer">
-                  <div className="w-14 h-14 bg-blue-100 group-hover:bg-blue-200 rounded-full flex items-center justify-center mb-3 transition-colors">
-                    <category.icon className="w-7 h-7 text-blue-600" />
+            {categoriesLoading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center text-center p-4 rounded-xl border border-gray-100">
+                    <Skeleton className="w-14 h-14 rounded-full mb-3" />
+                    <Skeleton className="h-4 w-24" />
                   </div>
-                  <h3 className="font-semibold text-sm text-gray-900 leading-tight">{category.name}</h3>
-                </div>
-              </Link>
-            ))}
+                ))
+              : categories.map((category) => {
+                  const Icon = getIconForCategory(category.name);
+                  return (
+                    <Link
+                      key={category._id}
+                      to={`/services?category=${encodeURIComponent(category.name)}`}
+                      className="group"
+                    >
+                      <div className="flex flex-col items-center text-center p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer">
+                        <div className="w-14 h-14 bg-blue-100 group-hover:bg-blue-200 rounded-full flex items-center justify-center mb-3 transition-colors">
+                          <Icon className="w-7 h-7 text-blue-600" />
+                        </div>
+                        <h3 className="font-semibold text-sm text-gray-900 leading-tight">{category.name}</h3>
+                      </div>
+                    </Link>
+                  );
+                })}
           </div>
         </div>
       </section>
@@ -156,42 +152,59 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-3xl font-bold">Featured Garages</h2>
-            <Link to="/services">
+            <Link to="/providers">
               <Button variant="outline">View All</Button>
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {topProviders.map((provider) => (
-              <Card key={provider.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="h-48 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                  <Build className="w-20 h-20 text-blue-400" />
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-semibold text-lg">{provider.name}</h3>
-                      <p className="text-gray-600 text-sm">{provider.category}</p>
-                    </div>
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm font-medium">{provider.rating}</span>
-                      <span className="ml-1 text-sm text-gray-500">({provider.reviews})</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                    <div className="flex items-center">
-                      <LocationOn className="w-4 h-4 mr-1" />
-                      {provider.distance}
-                    </div>
-                    <div className="flex items-center">
-                      <Schedule className="w-4 h-4 mr-1" />
-                      {provider.nextAvailable}
-                    </div>
-                  </div>
-                  <Button className="w-full" onClick={() => navigate('/services')}>Book Now</Button>
-                </CardContent>
-              </Card>
-            ))}
+            {providersLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <Skeleton className="h-48 w-full" />
+                    <CardContent className="p-6">
+                      <Skeleton className="h-5 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2 mb-4" />
+                      <Skeleton className="h-9 w-full" />
+                    </CardContent>
+                  </Card>
+                ))
+              : topProviders.map((provider) => (
+                  <Card key={provider._id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <img
+                      src={provider.businessImage || '/placeholder.svg'}
+                      alt={provider.businessName}
+                      className="h-48 w-full object-cover"
+                    />
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="min-w-0 flex-1 mr-2">
+                          <h3 className="font-semibold text-lg truncate">{provider.businessName}</h3>
+                          <p className="text-gray-600 text-sm truncate">{provider.category || 'General Services'}</p>
+                        </div>
+                        <div className="flex items-center flex-shrink-0">
+                          {(provider.totalReviews ?? 0) > 0 ? (
+                            <>
+                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                              <span className="ml-1 text-sm font-medium">{(provider.averageRating ?? 0).toFixed(1)}</span>
+                              <span className="ml-1 text-sm text-gray-500">({provider.totalReviews})</span>
+                            </>
+                          ) : (
+                            <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
+                          )}
+                        </div>
+                      </div>
+                      {provider.businessAddress && (
+                        <div className="flex items-center text-sm text-gray-600 mb-4">
+                          <LocationOn className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{provider.businessAddress}</span>
+                        </div>
+                      )}
+                      <Button className="w-full" onClick={() => navigate(`/provider/${provider._id}`)}>
+                        View Profile
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
           </div>
         </div>
       </section>
@@ -201,7 +214,7 @@ const Home = () => {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
           <p className="text-xl mb-8 opacity-90">
-            Join thousands of satisfied customers who trust Zenith
+            Join a growing community of car owners who trust Zenith
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register?role=provider">

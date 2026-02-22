@@ -915,7 +915,7 @@
 
 **[UX-FIX-001] Frontend: Fix fake 4.8 rating in ServiceDetailModal (missed from UX-ENG-003)**
 - **Assigned to**: senior-eng-1
-- **Status**: review
+- **Status**: qa
 - **Covers**: UX-002 required fix
 - **File**: `src/components/modals/ServiceDetailModal.tsx` (~line 106)
 - **What to fix**: The modal rating line still reads `|| '4.8'` fallback. Apply the same "New" badge pattern from UX-ENG-003: if `totalReviews === 0`, show `<Badge>New</Badge>` instead of stars + fake rating.
@@ -928,7 +928,7 @@
 
 **[UX-FIX-002] Frontend: Remove fake service counts from Home category tiles**
 - **Assigned to**: senior-eng-1
-- **Status**: review
+- **Status**: qa
 - **Covers**: UX-003 change request
 - **File**: `src/pages/Home.tsx` (~lines 25-30)
 - **What to fix**: Category tiles show fabricated counts ("500+", "300+", etc.). Remove the count line (`<p className="text-xs text-gray-500">{category.count} services</p>`) and the `count` property from the categories array.
@@ -936,6 +936,120 @@
   - [ ] No fake service counts visible on Home category tiles
   - [ ] Category tiles still show name and icon correctly
   - [ ] No TypeScript errors
+
+---
+
+### FEATURE TASKS — FEAT-PROVIDERS
+
+---
+
+**[FEAT-013] Fix broken filters on Providers listing page**
+- **Assigned to**: senior-eng-1
+- **Status**: qa
+- **Files**: `src/pages/Providers.tsx`, `server/routes/providers.js`
+- **Description**: The Providers page has several filter bugs — category filtering returns no results, sort order has no UI, maxRating slider is missing, and there is a `$or` conflict in the backend query builder. Fix all of them.
+
+**Bug 1 — Category filter broken (backend + frontend)**
+- **Root cause**: `Providers.tsx` builds `displayCategories` with `id: category.name` (a string like "Engine & Mechanical"). This string is sent as the `category` query param. The backend then does `query.category = category` where `ServiceProvider.category` is a MongoDB `ObjectId` — a string name can never match an ObjectId, so all category filters return 0 results.
+- **Fix**: In `Providers.tsx` change the `displayCategories` mapping to use `id: category._id` instead of `id: category.name`. The `selectedCategory` state will then hold an ObjectId string. The `filters.category` passed to `useAllProviders` sends this ObjectId to the backend, which correctly matches the `ObjectId` field on `ServiceProvider`.
+  - Also update the `setSelectedCategory('all')` reset in `clearAllFilters` — no change needed there since `'all'` is still the "no filter" sentinel.
+  - Update the active category chip highlight condition: `selectedCategory === category.id` still works since `id` is now the `_id`.
+
+**Bug 2 — `$or` conflict between `search` and `hasWebsite=false`/`hasPhone=false`** (`server/routes/providers.js:55-73`)
+- **Root cause**: When `search` is set, it writes `query.$or = [...]`. If `hasWebsite === 'false'` is also set, it overwrites `query.$or` with website conditions, silently dropping the search.
+- **Fix**: Use `query.$and` to combine multiple `$or` conditions when both are present. Replace lines 55-73 with logic that pushes each condition into a `query.$and` array:
+  ```js
+  const andConditions = [];
+  if (search) {
+    andConditions.push({ $or: [{ businessName: ... }, { businessDescription: ... }, { businessAddress: ... }] });
+  }
+  if (hasWebsite === 'true') { query.website = { $exists: true, $ne: '' }; }
+  else if (hasWebsite === 'false') { andConditions.push({ $or: [{ website: null }, { website: '' }] }); }
+  if (hasPhone === 'true') { query.businessPhone = { $exists: true, $ne: '' }; }
+  else if (hasPhone === 'false') { andConditions.push({ $or: [{ businessPhone: null }, { businessPhone: '' }] }); }
+  if (andConditions.length > 0) query.$and = andConditions;
+  ```
+
+**Bug 3 — `sortOrder` has no UI control** (`src/pages/Providers.tsx`)
+- **Root cause**: `sortOrder` state exists but there is no button/toggle to change it — it's always `'desc'`.
+- **Fix**: Add an Asc/Desc icon toggle button next to the sort dropdown. Use MUI `ArrowUpward`/`ArrowDownward` icons. Clicking toggles `sortOrder` between `'asc'` and `'desc'`.
+
+**Bug 4 — `maxRating` slider missing from Advanced Filters** (`src/pages/Providers.tsx`)
+- **Root cause**: `maxRating` state exists and is sent to the API but there is no slider for it in the Advanced Filters sheet — only `minRating` is shown.
+- **Fix**: Add a second `Slider` for "Maximum Rating" below the minimum rating slider in the Advanced Filters sheet. Same pattern as `minRating`. Also add `maxRating` to `clearAllFilters` (already there: `setMaxRating([5])`).
+
+**Bug 5 — Backend aggregation pipeline still computes fake 4.8 effectiveRating** (`server/routes/providers.js:107-122, 180-189`)
+- The `$addFields` stage replaces `averageRating` with 4.8 when it is 0 or null — this means the minimum rating filter can match providers who have no real ratings. Remove the fake 4.8 fallback from the pipeline; use the real `averageRating` value (0 is fine). Update both `$addFields` stages (the effectiveRating one and the `$project` averageRating one).
+
+- **Acceptance criteria**:
+  - [ ] Clicking a category chip actually filters the provider list to that category
+  - [ ] Searching while also filtering by hasWebsite or hasPhone works correctly (no results dropped)
+  - [ ] Asc/Desc toggle button appears next to the sort dropdown and changes sort direction
+  - [ ] Max Rating slider appears in Advanced Filters and limits results to providers at or below that rating
+  - [ ] Backend no longer injects fake 4.8 for providers with 0 reviews
+  - [ ] No TypeScript errors
+
+---
+
+**[FEAT-014] Add map view to Providers listing page**
+- **Assigned to**: senior-eng-1
+- **Status**: review
+- **Blocked by**: FEAT-013 (category filter must work before map is useful)
+- **Description**: Add an interactive map showing provider locations as pins. Use `react-leaflet` + `leaflet` (free, open-source, no API key needed). The backend already returns `coordinates: { lat, lng }` for each provider in the API response.
+
+**Install**:
+```bash
+npm install react-leaflet leaflet
+npm install -D @types/leaflet
+```
+
+**CSS** — import Leaflet's CSS in `src/main.tsx` or `src/index.css`:
+```ts
+import 'leaflet/dist/leaflet.css';
+```
+
+**Leaflet default icon fix** — Leaflet's default marker icons break with bundlers. Add this fix in a new `src/lib/leaflet-icons.ts` and import it once in the map component:
+```ts
+import L from 'leaflet';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({ iconUrl: markerIcon, iconRetinaUrl: markerIcon2x, shadowUrl: markerShadow });
+```
+
+**UI changes in `src/pages/Providers.tsx`**:
+
+1. Add a **List / Map toggle** button group above the providers grid (right-aligned, next to the results count). Use two icon buttons: `ViewList` and `Map` MUI icons. State: `const [viewMode, setViewMode] = useState<'list' | 'map'>('list')`.
+
+2. **List view** — existing provider grid, unchanged.
+
+3. **Map view** — render a `<MapContainer>` from `react-leaflet` filling the page area (`h-[600px] w-full rounded-lg`). Center on the average lat/lng of visible providers (or default to UK: `[54.5, -3.5]` zoom 6 if no providers have coordinates). For each provider that has `coordinates.lat` and `coordinates.lng`, render a `<Marker>` with a `<Popup>`:
+   ```tsx
+   <Popup>
+     <div className="min-w-[180px]">
+       <p className="font-semibold">{provider.businessName}</p>
+       <p className="text-sm text-gray-500">{provider.category?.name}</p>
+       <p className="text-sm">⭐ {provider.averageRating?.toFixed(1)} ({provider.totalReviews} reviews)</p>
+       <button onClick={() => handleViewProvider(provider._id)} className="mt-2 text-sm text-blue-600 underline">View Profile</button>
+     </div>
+   </Popup>
+   ```
+
+4. Show a notice if there are providers in the list without coordinates: "N providers are not shown on the map because their location is not set."
+
+5. Filters still work in map view — the same `providers` array (from the API, already filtered) is used for both views.
+
+- **Acceptance criteria**:
+  - [ ] List/Map toggle buttons appear above the results
+  - [ ] Switching to Map view shows a Leaflet map with provider pins
+  - [ ] Clicking a pin opens a popup with provider name, category, rating, and "View Profile" link
+  - [ ] "View Profile" in popup navigates to the provider detail page
+  - [ ] Applying filters (category, search, rating) updates the map pins in real time
+  - [ ] Providers without coordinates are excluded from the map (no crash)
+  - [ ] List view still works unchanged
+  - [ ] Map tiles load (OpenStreetMap default tiles — no API key needed)
+  - [ ] No TypeScript errors, no `any` types
 
 ---
 
@@ -1166,3 +1280,1010 @@ Connect on `/messages` page mount, disconnect on unmount.
   - [ ] Messages nav link shows unread count badge when there are unread messages
   - [ ] Messages nav link visible for both client and provider users
   - [ ] No TypeScript errors, no `any` types
+
+---
+
+## Sprint 4 — UI Polish (2026-02-21)
+
+---
+
+### UX DESIGN TASKS
+
+---
+
+**[UX-REDESIGN-001] Providers listing page redesign — simplify cards, fix styling, add polish**
+- **Assigned to**: senior-eng-1
+- **Status**: review
+- **Covers**: Card overload, hardcoded colors, inconsistent icons, redundant UI, missing background, no hover polish
+- **File**: `src/pages/Providers.tsx`
+- **Description**: The Providers page is the most information-dense page in the app at 473 lines with 8-10 data elements per card, inconsistent styling, and a cluttered layout. By comparison, the Services page (290 lines) and Home page (225 lines) are much cleaner. This task aligns the Providers page with their quality level.
+- **What to fix**:
+  1. **Simplify cards** — reduce from 8-10 elements to 6 clean elements per card:
+     - **Keep**: business image banner (h-32), blue header with avatar + name + category, description (2-line clamp), location row, rating + "View Profile" button row
+     - **Remove**: phone number row (available on detail page), service count, website badge, subcategory badge
+     - **Move**: verified badge inline next to business name as a small checkmark icon
+  2. **Replace hardcoded colors** — all `style={{backgroundColor: '#025bae'}}` → `className="bg-primary"`, all `style={{ fontSize: 16, color: '#025bae' }}` → `className="w-4 h-4 text-primary"`, all `style={{color: '#025bae'}}` → `className="text-primary"`
+  3. **Standardize icon sizing** — replace all `style={{ fontSize: 16 }}` with `className="w-4 h-4"`
+  4. **Add page background** — change outer `<div className="py-8">` to `<div className="min-h-screen bg-gray-50 py-8">` to match Services page
+  5. **Remove redundant clear filters button** — remove the standalone "Clear all (N)" ghost button outside the Sheet; the "Clear All" inside Advanced Filters is sufficient
+  6. **Add card hover polish** — `hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200` replacing `hover:shadow-md transition-shadow duration-200`
+  7. **Fix header typography** — remove inline `style={{fontFamily: ...}}` from h1
+- **Acceptance criteria**:
+  - [ ] Cards show 6 elements: image, name/category header, description, location, rating, View Profile button
+  - [ ] No inline `#025bae` colors remain — all use Tailwind `bg-primary`/`text-primary`
+  - [ ] Hover effect lifts cards slightly with shadow
+  - [ ] Category filter buttons use `bg-primary` not inline styles
+  - [ ] Advanced Filters Sheet still opens and functions
+  - [ ] Empty state still renders correctly
+  - [ ] Mobile responsive: 1-col mobile, 2-col md, 3-col lg
+  - [ ] Loading skeleton still renders with `bg-gray-50` background
+  - [ ] No TypeScript errors
+
+---
+
+### UX DESIGN ANALYSIS — Commercial-Grade Polish (2026-02-21)
+
+> **Context**: Full cross-page design audit comparing every screen against commercial SaaS standards (Calendly, Treatwell, ServiceTitan). The app has solid bones — shadcn/ui components, consistent grid layouts, responsive breakpoints — but several systemic issues prevent it from feeling like a shipped product.
+
+---
+
+**[UX-REDESIGN-002] Fix the CSS design system — `--primary` is the wrong color**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Priority**: critical — this is the root cause of 80+ hardcoded `#025bae` inline styles across the app
+- **File**: `src/index.css` (line 63)
+- **Description**: The `--primary` CSS variable is set to `222.2 47.4% 11.2%` which resolves to a near-black dark navy (`hsl(222, 47%, 11%)` ≈ `#0f172a`). This does NOT match the brand color `#025bae` (`hsl(207, 98%, 35%)`). Because `bg-primary` renders as near-black instead of brand blue, every engineer has been forced to use `style={{backgroundColor: '#025bae'}}` as a workaround. Fixing this one variable will make `bg-primary` and `text-primary` match the brand and allow bulk replacement of inline styles across the entire codebase.
+- **What to fix**:
+  1. Change `--primary` from `222.2 47.4% 11.2%` to `207 98% 35%` (which is `#025bae` in HSL)
+  2. Change `--primary-foreground` to `0 0% 100%` (white text on blue)
+  3. Change `--ring` to `207 98% 35%` (focus ring should match brand)
+- **Acceptance criteria**:
+  - [ ] `bg-primary` renders as `#025bae` blue, not near-black
+  - [ ] `text-primary` renders as brand blue
+  - [ ] All shadcn `<Button>` default variants render with brand blue background
+  - [ ] Focus rings on inputs and buttons are brand blue
+  - [ ] No visual regressions on existing components using `variant="default"`
+
+---
+
+**[UX-REDESIGN-003] App-wide: Replace all hardcoded `#025bae` inline styles with Tailwind classes**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: UX-REDESIGN-002 (primary must be correct first)
+- **Priority**: critical
+- **Description**: After fixing `--primary`, do a global sweep to replace every inline `style={{backgroundColor: '#025bae'}}`, `style={{color: '#025bae'}}`, `style={{borderLeftColor: '#025bae'}}`, and `style={{ fontSize: N, color: '#025bae' }}` with Tailwind equivalents. Also replace `#4a90e2` (secondary blue used on Dashboard stat cards) — either define a `--secondary-blue` token or use `bg-primary/80`.
+- **Files to change** (all affected):
+  - `src/pages/Services.tsx` — ~6 inline styles (card headers, icons, buttons, category chips, price)
+  - `src/pages/ProviderDetail.tsx` — ~10 inline styles (header, service card headers, icons, buttons)
+  - `src/pages/MyBookings.tsx` — ~8 inline styles (card headers, borders, links, icons, skeletons)
+  - `src/pages/Dashboard.tsx` — ~12 inline styles (headers, stat cards, icons, activity borders, stat values)
+  - `src/pages/Messages.tsx` — ~5 inline styles (headers, badges, bubbles, send button)
+  - `src/components/Layout/Header.tsx` — `getLinkStyle()` returns `{color: '#025bae'}` for active links; logo text uses inline `fontFamily`
+  - `src/components/modals/ServiceDetailModal.tsx` — check for inline styles
+  - `src/components/modals/ReviewModal.tsx` — check for inline styles
+- **Replacement rules**:
+  - `style={{backgroundColor: '#025bae'}}` → `className="bg-primary"`
+  - `style={{color: '#025bae'}}` → `className="text-primary"`
+  - `style={{borderLeftColor: '#025bae'}}` → `className="border-l-primary"`
+  - `style={{ fontSize: 16, color: '#025bae' }}` → `className="w-4 h-4 text-primary"`
+  - `style={{ fontSize: 12, color: '#025bae' }}` → `className="w-3 h-3 text-primary"`
+  - `style={{backgroundColor: '#4a90e2'}}` → `className="bg-primary/80"` (or define a secondary token)
+  - `style={{color: '#025bae'}}` on stat values → `className="text-primary"`
+- **Acceptance criteria**:
+  - [ ] `git grep '#025bae' src/` returns 0 results
+  - [ ] `git grep '#4a90e2' src/` returns 0 results
+  - [ ] All blue headers, buttons, icons, borders still render as brand blue
+  - [ ] No TypeScript errors
+
+---
+
+**[UX-REDESIGN-004] App-wide: Remove all inline `fontFamily` declarations**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Priority**: major
+- **Description**: Six files use `style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif'}}` inline. This font is never imported via `@font-face` or Google Fonts, so it silently falls back to system fonts anyway. The inline declarations add noise and create a false impression that the font is applied. Either import the font properly and set it globally, or remove all inline references and let the system font stack handle it.
+- **Recommended approach**: Remove all inline `fontFamily` styles. If Red Hat Display is wanted, add a single `@import url(...)` in `src/index.css` and set `font-family` on `body` in the base layer — never inline.
+- **Files affected**:
+  - `src/pages/MyBookings.tsx:181`
+  - `src/pages/Messages.tsx:151`
+  - `src/pages/Dashboard.tsx:84`
+  - `src/components/Layout/Header.tsx:75` (logo)
+- **Acceptance criteria**:
+  - [ ] `git grep 'fontFamily' src/` returns 0 results
+  - [ ] Page titles render with consistent font (system or imported)
+  - [ ] No visual regression
+
+---
+
+**[UX-REDESIGN-005] App-wide: Standardize all MUI icon sizing to Tailwind classes**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: UX-REDESIGN-003
+- **Priority**: major
+- **Description**: Icons across the app use three different sizing approaches: (1) `className="w-4 h-4"` (correct Tailwind way), (2) `style={{ fontSize: 16 }}` (MUI inline), (3) `style={{ fontSize: 12 }}` (MUI inline smaller). Standardize everything to Tailwind `w-N h-N` classes.
+- **Replacement rules**:
+  - `style={{ fontSize: 16 }}` → `className="w-4 h-4"` (and merge with any existing className)
+  - `style={{ fontSize: 12 }}` → `className="w-3 h-3"`
+  - `style={{ fontSize: 16, color: '#025bae' }}` → `className="w-4 h-4 text-primary"` (handled by UX-REDESIGN-003, but verify none remain)
+- **Files**: Same set as UX-REDESIGN-003, plus `src/pages/ProviderDetail.tsx` review stars at line 386
+- **Acceptance criteria**:
+  - [ ] `git grep 'fontSize' src/` returns 0 results (for icon styling)
+  - [ ] All icons render at correct sizes
+  - [ ] No TypeScript errors
+
+---
+
+**[UX-REDESIGN-006] Services page: Bring up to same polish level as Providers page**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: UX-REDESIGN-002, UX-REDESIGN-003
+- **Priority**: major
+- **File**: `src/pages/Services.tsx`
+- **Description**: Services.tsx still has the pre-redesign card styling that Providers.tsx just got cleaned up. Apply the same polish:
+  1. **Card hover**: Change `hover:shadow-md transition-shadow duration-200` to `hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`
+  2. **Category chip styling**: Replace the inline `style` on category buttons (lines 153-156) with the same Tailwind pattern from Providers: `className={selected ? "... bg-primary hover:bg-primary/90" : "..."}`
+  3. **Description clamp**: Add `line-clamp-2` to the service description (line 211) to keep cards uniform height
+  4. **Results count alignment**: Wrap the `{filteredServices.length} services found` in the same `flex justify-between` pattern as Providers, to leave room for future controls
+- **Acceptance criteria**:
+  - [ ] Service cards have the same hover lift effect as Provider cards
+  - [ ] Category buttons use Tailwind, no inline `style`
+  - [ ] Descriptions are clamped to 2 lines
+  - [ ] No TypeScript errors
+
+---
+
+**[UX-REDESIGN-007] ProviderDetail page: Add business image banner and visual hierarchy**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: UX-REDESIGN-002
+- **Priority**: major
+- **File**: `src/pages/ProviderDetail.tsx`
+- **Description**: The ProviderDetail page goes straight from the page background into a blue card header with no visual impact. Compare to the provider cards on the listing page which show a business image banner above the blue header — the detail page should be at least as rich.
+- **What to fix**:
+  1. Add a `provider.businessImage` banner above the blue header card (full-width, `h-48 object-cover` with a subtle gradient overlay at the bottom for text legibility). Fall back to a gradient placeholder if no image.
+  2. Overlap the avatar slightly onto the banner (negative margin, `ring-4 ring-white`) for a professional profile look — same pattern used by LinkedIn/Google Business profiles.
+  3. The business hours card at line 288 uses `className='p-8'` with no shadow, no border-0, no overflow-hidden — it looks different from every other card on the page. Match it to the standard pattern: `className="shadow-sm border-0 overflow-hidden"` with a blue header strip.
+  4. Service sub-cards use `#4a90e2` for their header — after UX-REDESIGN-003 this will be `bg-primary/80`. Ensure there is still a visual distinction between main provider header and sub-service headers.
+- **Acceptance criteria**:
+  - [ ] Business image banner appears above the provider header
+  - [ ] Avatar overlaps the banner/header boundary
+  - [ ] Business hours card matches the styling pattern of other cards
+  - [ ] No TypeScript errors
+
+---
+
+**[UX-REDESIGN-008] Loading skeletons: Match the card layout they replace**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Priority**: minor
+- **Description**: The loading skeletons on Providers, Services, and ProviderDetail pages are generic rectangles that don't match the shape of the actual cards (image banner + blue header + content). This causes a visible layout shift when data loads. Update skeletons to mimic the real card structure:
+  1. **Providers/Services** (listing pages): Skeleton should show: a `h-32` gray block (image), a `h-12 bg-primary/20` block (blue header area), then content lines. This matches the real card.
+  2. **ProviderDetail**: Skeleton should show: `h-48` gray block (banner), `h-16 bg-primary/20` block (header), then content blocks.
+- **Files**: `src/pages/Providers.tsx:139-149`, `src/pages/Services.tsx:108-118`, `src/pages/ProviderDetail.tsx:94-111`
+- **Acceptance criteria**:
+  - [ ] Loading skeletons visually resemble the real card layout
+  - [ ] No layout shift when data loads
+  - [ ] No TypeScript errors
+
+---
+
+**[UX-REDESIGN-009] MyBookings: Replace heavy border-left cards with cleaner card styling**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: UX-REDESIGN-003
+- **Priority**: minor
+- **File**: `src/pages/MyBookings.tsx`
+- **Description**: Booking items use `border-l-4 bg-gray-50` with inline `borderLeftColor` which looks dated (2016-era Material Design). Professional booking apps (Calendly, Acuity) use full cards with a subtle status indicator. Modernize:
+  1. Replace `border-l-4 bg-gray-50` items with `rounded-lg border border-gray-200 bg-white` cards with a small colored status dot or status badge in the top-right corner
+  2. Add `hover:shadow-sm transition-all duration-150` for subtle interaction feedback
+  3. The completed bookings section uses `opacity-75` which makes everything look disabled — instead use full opacity with a muted status badge to distinguish from active bookings
+- **Acceptance criteria**:
+  - [ ] Booking items use modern card styling, no heavy left-border
+  - [ ] Status clearly visible via badge/dot, not border color
+  - [ ] Completed bookings are distinguishable but not washed out
+  - [ ] No TypeScript errors
+
+---
+
+**[UX-REDESIGN-010] Empty states: Make them actionable and branded**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Priority**: minor
+- **Description**: Empty states across the app use raw MUI icons at reduced opacity and generic text. Professional apps use this real estate for onboarding. Improve:
+  1. Every empty state should have a clear CTA button (not just text). For example:
+     - "No upcoming appointments" → add "Browse Services" button
+     - "No conversations yet" → add "Find a Mechanic" button
+     - "No reviews yet" → "Be the first to review" is already there, keep it
+  2. Use the brand blue for the empty state icon instead of gray: `text-primary/30` instead of `text-gray-300`/`text-gray-400`
+  3. Empty state copy should be specific to the car mechanic domain, not generic. E.g. "No upcoming appointments" → "No upcoming services — find a mechanic to get started"
+- **Files**: `src/pages/MyBookings.tsx` (2 empty states), `src/pages/Dashboard.tsx` (2 empty states), `src/pages/Messages.tsx` (2 empty states), `src/pages/ProviderDetail.tsx` (2 empty states)
+- **Acceptance criteria**:
+  - [ ] Every empty state has at least one CTA button
+  - [ ] Icons use brand color at low opacity, not gray
+  - [ ] Copy is domain-specific (mentions car/mechanic/garage where appropriate)
+  - [ ] No TypeScript errors
+
+---
+
+### TECH LEAD REVIEW TASKS
+
+---
+
+**[TL-010] Review and prioritize UX-REDESIGN tasks**
+- **Assigned to**: tech-lead
+- **Status**: done
+- **Description**: Review the UX-REDESIGN-002 through UX-REDESIGN-010 tasks above. The recommended implementation order is:
+  1. **UX-REDESIGN-002** (fix `--primary`) — unblocks everything else
+  2. **UX-REDESIGN-003** (global inline style sweep) — biggest single improvement
+  3. **UX-REDESIGN-004** (remove fontFamily) — quick cleanup
+  4. **UX-REDESIGN-005** (icon sizing) — quick cleanup
+  5. **UX-REDESIGN-006** (Services parity) — medium effort
+  6. **UX-REDESIGN-007** (ProviderDetail banner) — medium effort, high visual impact
+  7. **UX-REDESIGN-008** (skeletons) — minor polish
+  8. **UX-REDESIGN-009** (MyBookings cards) — minor polish
+  9. **UX-REDESIGN-010** (empty states) — minor polish
+- **Acceptance criteria**:
+  - [ ] Tasks triaged and assigned
+  - [ ] Implementation order confirmed or adjusted
+  - [ ] Engineers notified via inbox
+
+---
+
+## Sprint 5 — Static Code Removal + Form Logging + Form Validation (2026-02-21)
+
+> **Context**: Full audit of `Home.tsx` and all form pages revealed hardcoded data arrays, debug `console.log` statements that expose user data, and insufficient form validation. This sprint fixes all three.
+
+---
+
+### STATIC CODE REMOVAL — HOME PAGE
+
+---
+
+**[HOME-001] Frontend: Replace hardcoded `topProviders` array in Home.tsx with real API data**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Home.tsx` (~lines 56-84)
+- **Description**: The Home page has a hardcoded `topProviders` array with three fake providers (Mike's Auto Repair, City Body Shop, QuickFit Tyres) with fake ratings (4.9/4.8), fake review counts (312/187/254), and fake distances ("0.5 mi", "1.2 mi"). Replace this with a real API call.
+
+**What to do:**
+1. Remove the hardcoded `topProviders` array (lines ~56-84) and the `TopProvider` interface above it
+2. Use the existing `useAllProviders` hook (imported from `src/hooks/useProvider.ts`) with `{ limit: 3, sortBy: 'rating', sortOrder: 'desc' }` params — or whatever filter params the hook accepts — to fetch the top 3 rated providers
+3. In the "Featured Garages" / "Top-Rated Mechanics" section, render the real providers from the API response
+4. Show a loading skeleton while fetching (use shadcn `Skeleton` component, 3 cards)
+5. Show an empty state ("No providers available yet") if the API returns no results
+6. Each provider card should show: `provider.businessName`, `provider.category?.name`, `provider.averageRating` (with "New" badge if `totalReviews === 0`, same pattern as Providers.tsx), `provider.businessImage` (with `/placeholder.svg` fallback), and a "View Profile" button linking to `/providers/:id`
+7. Remove fake distance strings entirely — distance is not available from the API
+
+- **Acceptance criteria**:
+  - [ ] No hardcoded `topProviders` array in `Home.tsx`
+  - [ ] Real providers fetched from API (top 3 by rating)
+  - [ ] Loading skeleton shows while data loads
+  - [ ] Empty state if no providers
+  - [ ] "New" badge when `totalReviews === 0` (no fake rating)
+  - [ ] "View Profile" links to correct `/providers/:id`
+  - [ ] No fake distances shown
+  - [ ] No TypeScript errors
+
+---
+
+**[HOME-002] Frontend: Replace hardcoded `categories` array in Home.tsx with API data**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: HOME-001 (can be done in parallel — just don't conflict on same file)
+- **File**: `src/pages/Home.tsx` (~lines 24-31)
+- **Description**: The Home page has a hardcoded `categories` array (Engine & Mechanical, Body & Paint, Electrical, Tyres & Wheels) with only 4 of the 6 car mechanic categories. `Services.tsx` and `ProviderProfile.tsx` already use the `useServiceCategories()` hook to load categories dynamically from the API. Home should do the same.
+
+**What to do:**
+1. Remove the hardcoded `categories` array (lines ~24-31) and import `useServiceCategories` from the same hook file used in `Services.tsx`
+2. Use `const { data: categories, isLoading } = useServiceCategories()` (or equivalent)
+3. In the category tiles section, map over the real `categories` array from the API
+4. Reuse the existing `getIconForCategory` pattern (same icon mapping as `Services.tsx`) — define a local helper or import it
+5. Each category tile should remain a `<Link>` to `/services?category=<category.name>` (or `<category._id>` — check how Services.tsx reads it from URL) — preserving the filter navigation added in UX-ENG-001
+6. Show a loading skeleton (6 placeholder tiles) while fetching
+
+- **Acceptance criteria**:
+  - [ ] No hardcoded `categories` array — loaded from API via `useServiceCategories()`
+  - [ ] All 6 car mechanic categories shown (not just 4)
+  - [ ] Category tiles still link to `/services` with correct filter
+  - [ ] Icons match the 6 car mechanic categories
+  - [ ] Loading skeleton shown while fetching
+  - [ ] No TypeScript errors
+
+---
+
+**[HOME-003] Frontend: Remove fake stat text from Home.tsx**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Home.tsx` (~line 204)
+- **Description**: The Home page "Why Choose Zenith?" section contains the text "thousands of satisfied customers" (or similar vague stat) that is fabricated. There is no API that provides a real user/booking count. Either remove the stat entirely or replace it with a non-numerical claim that does not imply a specific volume.
+
+**What to do:**
+1. Find the stat text (e.g. "10,000+ customers", "thousands of satisfied customers", or similar) in the "Why Choose Zenith?" features section
+2. Option A (preferred): Remove the stat number/text entirely — keep the feature description but drop the fake quantifier. E.g. "Join our growing community of car owners" instead of "Join 10,000+ satisfied customers"
+3. Option B: If other stats in that section are also fake (e.g. "500+ mechanics"), remove those too and replace with non-numerical copy ("A growing network of trusted mechanics")
+4. Do NOT replace with different fake numbers — remove or rephrase
+
+- **Acceptance criteria**:
+  - [ ] No fabricated numbers (e.g. "10,000+", "thousands of") on the Home page
+  - [ ] Copy still reads naturally without the fake stats
+  - [ ] No TypeScript errors
+
+---
+
+### FORM LOGGING + FORM VALIDATION TASKS
+
+---
+
+**[FORM-001] Frontend: Add inline validation errors to Login.tsx**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Login.tsx`
+- **Description**: Login form currently relies on HTML5 browser validation (`type="email"`, `required`) and shows errors only as toasts. Add inline field-level error messages so users see what is wrong immediately.
+
+**What to do:**
+1. Wrap the form with React Hook Form (`useForm`) — import from `'react-hook-form'` (already a project dependency)
+2. Add a Zod schema using `zodResolver`:
+   ```ts
+   const loginSchema = z.object({
+     email: z.string().email('Enter a valid email address'),
+     password: z.string().min(1, 'Password is required'),
+   });
+   ```
+3. Register each input with React Hook Form's `register` and display `formState.errors.<field>.message` below each input using a `<p className="text-sm text-red-500 mt-1">` element
+4. The existing `onSubmit` handler + toast error on API failure stays unchanged
+5. Remove the `required` HTML attributes (React Hook Form handles this)
+
+- **Acceptance criteria**:
+  - [ ] Submitting with empty email shows "Enter a valid email address" inline below the email field
+  - [ ] Submitting with invalid email format shows inline error
+  - [ ] Submitting with empty password shows "Password is required" inline
+  - [ ] API errors still shown as toasts (unchanged)
+  - [ ] No TypeScript errors
+
+---
+
+**[FORM-002] Frontend: Register.tsx — remove data-exposing console.logs + improve validation**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Register.tsx`
+- **Description**: Register form logs user email and name to the browser console (`console.log('Attempting registration with data:', {...})` at ~line 76, `console.error('Registration error details:', error)` at ~line 91). It also has no minimum-length validation on the name field and does not trim the email before submission.
+
+**What to do:**
+1. **Remove both console statements** — line ~76 (`console.log`) and line ~91 (`console.error`). The API error is already shown as a toast — the `console.error` is redundant and exposes sensitive data
+2. **Add name min-length validation**: If using React Hook Form + Zod, add `name: z.string().min(2, 'Name must be at least 2 characters').max(100)` to the schema. If the form uses plain state, add a check before submission
+3. **Trim email before submission**: `email: data.email.trim().toLowerCase()` — prevents accounts being created with leading/trailing spaces that make login fail
+
+- **Acceptance criteria**:
+  - [ ] `console.log` with user data removed (line ~76)
+  - [ ] `console.error` with error details removed (line ~91)
+  - [ ] Name shorter than 2 characters shows an inline validation error
+  - [ ] Email is trimmed (`.trim().toLowerCase()`) before the API call
+  - [ ] No TypeScript errors
+
+---
+
+**[FORM-003] Frontend: Profile.tsx — remove debug console.logs + add phone/address validation**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Profile.tsx`
+- **Description**: Profile form has multiple debug console.logs that log full form data to the browser console (`console.log('Form data before submit:', data)` at ~line 174, and AI schedule debug logs at ~lines 206 and 224). The phone field also has no validation rules, allowing any input including letters.
+
+**What to do:**
+1. **Remove all three console.log statements**: line ~174, line ~206, line ~224. Replace none of them — these were debug-only
+2. **Add phone validation**: The phone field uses `register('phone')` with no rules. Add:
+   ```ts
+   register('phone', {
+     pattern: {
+       value: /^[+\d\s()\-]{7,20}$/,
+       message: 'Enter a valid phone number',
+     },
+   })
+   ```
+   And show `errors.phone?.message` below the field
+3. **Add address validation**: The address field should have a minimum length. Add `minLength: { value: 5, message: 'Enter a complete address' }` rule or equivalent
+4. Display both inline error messages below their respective fields using `<p className="text-sm text-red-500 mt-1">`
+
+- **Acceptance criteria**:
+  - [ ] `console.log('Form data before submit:', ...)` removed
+  - [ ] AI schedule debug console.logs removed (lines ~206, ~224)
+  - [ ] Phone field rejects non-phone input (letters, short strings) with inline error
+  - [ ] Address field rejects very short input with inline error
+  - [ ] No TypeScript errors
+
+---
+
+**[FORM-004] Frontend: ProviderProfile.tsx — remove emoji console.logs + add Zod phone/URL validation**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/provider/ProviderProfile.tsx`
+- **Description**: ProviderProfile has 9+ `console.log` statements with emoji prefixes scattered across the file (lines ~114, ~228-255, ~342-348) that dump full form state, API responses, and image upload data to the console. The existing Zod schema also accepts any string for `businessPhone` (no format check) and any string for `website` (no URL format check).
+
+**What to do:**
+1. **Remove all emoji console.logs** — search for `console.log('🔍`, `console.log('✅`, `console.log('❌`, `console.log('📤`, `console.log('🎯`, `console.log('📋` and any other emoji-prefixed logs in the file. Remove every one. The UX-ENG-010 task may have already removed some — only remove what still remains
+2. **Add phone regex to Zod schema**: Find the `providerProfileSchema` (or equivalent). Change the `businessPhone` field to:
+   ```ts
+   businessPhone: z.string()
+     .regex(/^[+\d\s()\-]{7,20}$/, 'Enter a valid phone number (digits, spaces, +, - only)')
+     .optional()
+     .or(z.literal(''))
+   ```
+3. **Add URL validation to Zod schema**: Change the `website` field to:
+   ```ts
+   website: z.string()
+     .url('Enter a valid URL starting with https://')
+     .optional()
+     .or(z.literal(''))
+   ```
+   This allows empty string (no website) but rejects strings that are not valid URLs
+4. Show both validation errors inline below their fields (they will display automatically via React Hook Form if the schema is wired up correctly)
+
+- **Acceptance criteria**:
+  - [ ] No emoji console.logs in ProviderProfile.tsx
+  - [ ] `businessPhone` field rejects strings like "not-a-phone" or "abc" with an inline error
+  - [ ] `website` field rejects strings like "google.com" (no protocol) or "not a url" with an inline error
+  - [ ] Empty `website` field (blank) is still valid
+  - [ ] No TypeScript errors
+
+---
+
+**[FORM-005] Frontend: ProviderSchedule.tsx — remove debug logs + add real-time validation + overlap detection**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/provider/ProviderSchedule.tsx`
+- **Description**: ProviderSchedule has debug console.logs at ~lines 218, 234, 280, 317 that log schedule state changes. Time validation (end time > start time) exists at submit only — there is no real-time feedback as the provider types. There is also no detection of overlapping time slots on the same day (e.g. two Monday slots 09:00-12:00 and 11:00-14:00).
+
+**What to do:**
+1. **Remove debug console.logs** at lines ~218, ~234, ~280, ~317 — these log schedule slot state. Remove all of them
+2. **Add real-time end-time validation**: On the end time input, add an `onChange` or `onBlur` handler that immediately checks `endTime > startTime`. If invalid, show an inline `<p className="text-sm text-red-500">End time must be after start time</p>` below the end time field. Clear the error when the condition is satisfied. Do NOT wait until submit to show this error
+3. **Add overlap detection on save**: Before calling the save API, check if any two slots for the same `dayOfWeek` have overlapping time ranges. Two slots overlap if `slot1.startTime < slot2.endTime && slot2.startTime < slot1.endTime`. If an overlap is found, show a toast: "Time slots on [day name] overlap — please adjust the times" and block submission. Do not silently save overlapping slots
+
+- **Acceptance criteria**:
+  - [ ] Debug console.logs removed
+  - [ ] Changing end time to be before start time shows inline error immediately (no submit needed)
+  - [ ] Saving overlapping slots on the same day shows a toast and blocks the API call
+  - [ ] Valid slots still save correctly
+  - [ ] No TypeScript errors
+
+---
+
+**[FORM-006] Frontend: ProviderServices.tsx — add missing validation rules**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/provider/ProviderServices.tsx`
+- **Description**: The service form has good validation for most fields but is missing constraints on `maxBookingsPerDay`, price upper bound, and duration upper bound — allowing providers to submit nonsensical values (e.g. price of £9,999,999 or duration of 99,999 minutes).
+
+**What to do:**
+1. **`maxBookingsPerDay` validation**: This field currently has no validation rules. Add:
+   - Required (must be set when the field is shown)
+   - Integer only (no decimals)
+   - Min: 1 (at least 1 booking per day)
+   - Max: 50 (reasonable upper limit)
+   - Inline error: "Must be a whole number between 1 and 50"
+2. **Price upper limit**: Add a max constraint: `price: z.number().min(0, 'Price cannot be negative').max(10000, 'Price cannot exceed £10,000')`. Currently only a min of 0 exists
+3. **Duration upper limit**: Add a max constraint: `duration: z.number().min(5, 'Minimum 5 minutes').max(480, 'Maximum 8 hours (480 minutes)')`. Currently no max exists, allowing e.g. duration: 99999
+4. Show all new validation errors inline below their fields
+
+- **Acceptance criteria**:
+  - [ ] `maxBookingsPerDay` of 0 or 51 shows an inline error
+  - [ ] `maxBookingsPerDay` accepts 1 through 50
+  - [ ] Price above £10,000 shows inline error
+  - [ ] Duration above 480 minutes shows inline error
+  - [ ] Existing validation (price ≥ 0, duration ≥ 5) still works
+  - [ ] No TypeScript errors
+
+---
+
+**[FORM-007] Frontend: BookingForm.tsx — remove console.error + add date/slot/notes validation**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/components/booking/BookingForm.tsx`
+- **Description**: BookingForm has a `console.error('Booking error:', error)` at ~line 104 that exposes error details to the console. It also allows selecting past dates, does not validate that the selected time slot is not already booked (the `bookedSlots` array is populated but never checked in `handleSubmit`), and does not trim the `notes` field before submission.
+
+**What to do:**
+1. **Remove `console.error`** at ~line 104. The booking error is already shown as a toast — the console.error is redundant and may expose internal error details
+2. **Add past-date validation**: Before submitting, check that the selected date is today or in the future. If the date is in the past, show a toast: "Please select a future date" and block submission. Also, if the date picker allows past dates to be selected in the UI, add a `minDate` or `disabled` prop to prevent selecting them
+3. **Validate selected slot against `bookedSlots`**: The component already has a `bookedSlots` array. In `handleSubmit`, before calling the booking API, check if `selectedTimeSlot` is in `bookedSlots`. If it is, show a toast: "This time slot is already booked — please choose another" and block submission. This prevents race conditions where the slot was booked by another user between page load and submission
+4. **Trim `notes` before submission**: Change `notes: data.notes` to `notes: data.notes?.trim()` in the API payload
+
+- **Acceptance criteria**:
+  - [ ] `console.error` at ~line 104 removed
+  - [ ] Selecting a past date and submitting shows an error toast and blocks the API call
+  - [ ] Selecting an already-booked time slot and submitting shows an error toast and blocks the API call
+  - [ ] `notes` is trimmed before being sent to the API
+  - [ ] Valid bookings (future date, available slot) still submit correctly
+  - [ ] No TypeScript errors
+
+---
+
+## Sprint 6 — Providers Page UI Improvements (2026-02-21)
+
+---
+
+**[PROV-001] Frontend: Make provider cards more compact**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Providers.tsx`
+- **Description**: The provider cards are too tall. Reduce the size of every element so more cards fit in the viewport without scrolling.
+
+**What to change** (all changes within the `providers.map(...)` card JSX):
+1. **Business image banner**: reduce from `h-32` → `h-20`
+2. **Blue header section**: reduce from `px-4 py-3` → `px-3 py-2`
+3. **Avatar circle**: reduce from `w-10 h-10` → `w-8 h-8`
+4. **Business name**: reduce from `text-lg` → `text-sm font-semibold`
+5. **Category text**: reduce from `text-sm` → `text-xs`
+6. **CardContent**: reduce from `p-4` with `space-y-3` → `p-3` with `space-y-2`
+7. **Description**: keep `text-sm line-clamp-2` but reduce to `line-clamp-1` to save height
+8. **Grid gap**: reduce from `gap-6` → `gap-4`
+9. **Loading skeleton**: reduce `Skeleton className="h-48 w-full"` → `h-28 w-full` to match new banner height
+
+- **Acceptance criteria**:
+  - [ ] Cards are visibly more compact (less vertical height per card)
+  - [ ] All card content still readable (name, category, location, rating, button)
+  - [ ] 3-column grid still applies at lg breakpoint
+  - [ ] Loading skeletons match new card proportions
+  - [ ] No TypeScript errors
+
+---
+
+**[PROV-002] Frontend: Show business image inside the circular avatar badge**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Providers.tsx` (~lines 457-471)
+- **Description**: The card header currently has two separate elements: (1) a `h-32` banner image above the blue header, and (2) a small circular avatar inside the blue header that shows either a `profilePhoto` or a letter badge. The user wants the business image to appear in the circular avatar. Remove the separate banner image and instead display `businessImage` (falling back to `profilePhoto`, then falling back to the letter) inside the circular badge.
+
+**What to change**:
+1. **Remove the business image banner** — remove the entire `<img src={provider.businessImage || '/placeholder.svg'} ... className="w-full h-20 object-cover" />` block (after PROV-001 this is `h-20`, originally `h-32`)
+2. **Update the avatar circle** — change the avatar logic to show the businessImage first, then profilePhoto, then the letter:
+   ```tsx
+   <div className="flex-shrink-0">
+     {(provider.businessImage || provider.profilePhoto) ? (
+       <img
+         src={provider.businessImage || provider.profilePhoto}
+         alt={provider.businessName}
+         className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
+       />
+     ) : (
+       <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+         <span className="text-white font-semibold text-sm">
+           {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
+         </span>
+       </div>
+     )}
+   </div>
+   ```
+   Note: if PROV-001 reduced the avatar to `w-8 h-8`, apply the same size here — keep consistent with PROV-001
+3. **Also update the loading skeleton** — remove the top `Skeleton className="h-28 w-full"` (the banner skeleton) since there is no longer a banner
+
+- **Acceptance criteria**:
+  - [ ] No separate banner image above the blue header
+  - [ ] Circular avatar shows `businessImage` when available
+  - [ ] Falls back to `profilePhoto` when no businessImage
+  - [ ] Falls back to first-letter badge when neither image exists
+  - [ ] Card layout looks clean without the banner (blue header starts immediately)
+  - [ ] No TypeScript errors
+
+---
+
+**[PROV-003] Frontend: Make business name clickable — navigate to provider detail**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Providers.tsx` (~lines 472-478)
+- **Description**: The business name (`<h3>`) in the card header is plain text. Make it a clickable element that navigates to the provider detail page, the same way the "View Profile" button does.
+
+**What to change**:
+1. Wrap the business name text in a `<button>` that calls `handleViewProvider(provider._id)`:
+   ```tsx
+   <button
+     onClick={() => handleViewProvider(provider._id)}
+     className="font-semibold text-sm truncate flex items-center gap-1.5 text-left hover:underline cursor-pointer"
+   >
+     {provider.businessName || 'Business Name'}
+     {(provider as { isVerified?: boolean }).isVerified === true && (
+       <Verified className="w-4 h-4 text-white/90 flex-shrink-0" />
+     )}
+   </button>
+   ```
+2. The `<h3>` wrapper can be kept or replaced — the important thing is the name text itself is clickable and shows `cursor-pointer` + `hover:underline` to signal it is a link
+3. The "View Profile" button at the bottom of the card stays — both the name and the button navigate to the same place
+
+- **Acceptance criteria**:
+  - [ ] Clicking the business name navigates to `/provider/:id` (or triggers login redirect if unauthenticated)
+  - [ ] Cursor changes to pointer on hover over the name
+  - [ ] Hover shows underline on the name text
+  - [ ] Verified badge still appears next to the name
+  - [ ] "View Profile" button still works as before
+  - [ ] No TypeScript errors
+
+---
+
+**[PROV-004] Frontend: Show map always on top above the provider list (remove List/Map toggle)**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/Providers.tsx`
+- **Description**: Currently the map is a toggle — users see either the map OR the list. The user wants the map to always be visible at the top of the page, with the provider list shown below it. Remove the List/Map toggle buttons entirely and render both map and list simultaneously.
+
+**What to change**:
+1. **Remove the `viewMode` state** — delete `const [viewMode, setViewMode] = useState<'list' | 'map'>('list')`
+2. **Remove the List/Map toggle buttons** — delete the entire `<div className="flex items-center border rounded-md overflow-hidden">` block containing the `ViewList` and `Map` icon buttons (~lines 360-381)
+3. **Remove the `ViewList` and `Map` icon imports** from `@mui/icons-material` (lines 38-39) if not used elsewhere
+4. **Move the map above the list** — change the render order so the map renders first, then the provider grid below it. The map should always be visible regardless of whether there are results
+5. **Reduce map height** — change from `h-[600px]` to `h-[350px]` so it takes less space when shown alongside the list
+6. **Remove the `viewMode === 'map'` and `viewMode === 'list'` conditions** — always render both sections:
+   ```tsx
+   {/* Map — always visible */}
+   {(() => {
+     const mappable = providers.filter(p => p.coordinates?.lat && p.coordinates?.lng);
+     // ... existing map logic
+     return (
+       <div className="mb-6">
+         {/* existing MapContainer with h-[350px] */}
+       </div>
+     );
+   })()}
+
+   {/* Provider list — always visible below map */}
+   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+     {providers.map(...)}
+   </div>
+   ```
+7. Keep the "N providers not shown on map" notice — it's still useful
+
+- **Acceptance criteria**:
+  - [ ] Map is always visible at the top of the results area (no toggle needed)
+  - [ ] Provider card list is always visible below the map
+  - [ ] Map height is `h-[350px]` (not `h-[600px]`)
+  - [ ] List/Map toggle buttons are gone
+  - [ ] `viewMode` state is removed
+  - [ ] Applying filters updates both map pins and list simultaneously
+  - [ ] "N providers not shown on map" notice still appears when applicable
+  - [ ] No TypeScript errors
+
+---
+
+## Sprint 7 — MyBookings Page Redesign (2026-02-21)
+
+> **Design Analysis — MyBookings.tsx (Client View)**
+>
+> **What it does well:**
+> - Splits upcoming vs completed bookings into separate sections (good IA)
+> - AlertDialog for cancel confirmation (safe destructive action)
+> - Review CTA on completed bookings (good post-visit flow)
+> - Header shows avatar + count badges (useful summary)
+>
+> **What makes it look amateur:**
+>
+> 1. **Every section is a blue-header card** — the page is 3 stacked blue bars (header, upcoming, completed). This "blue bar → white content → blue bar → white content" rhythm is monotonous and looks like a dashboard admin template, not a consumer booking app. Professional booking apps (Calendly, Treatwell, Acuity) use white/neutral page headers with color used sparingly for accents.
+>
+> 2. **`border-l-4` booking items** — thick left-bordered rows were a Material Design v1 pattern (~2015). Modern booking UIs use discrete cards with rounded corners, subtle borders, and a status badge/pill rather than a colored bar.
+>
+> 3. **`opacity-75` on completed bookings** — makes the entire section look broken/disabled. Users may think the page failed to load. Professional apps use full opacity with a muted badge (e.g. "Completed" in gray pill) to distinguish past from active.
+>
+> 4. **Header card is heavy** — a full-width blue card with avatar + counts feels like an entire "page hero" for what is essentially a list page. Calendly and Treatwell use a simple `h1 + subtitle` text header with filter tabs below — no card, no background.
+>
+> 5. **No tabs or filter** — upcoming and completed are two separate card sections requiring scroll. Professional apps use tabs (Upcoming | Past | Cancelled) so users can switch views without scrolling past an empty section.
+>
+> 6. **Status shown 3 different ways** — the `getStatusBadge()` function exists but is never called. Instead, status is shown via: (a) a colored dot + uppercase text label, (b) the `border-l-4` color, and (c) different section placement. Pick one.
+>
+> 7. **No "Book Again" on completed** — a common pattern in booking apps. Users who completed a service should be able to rebook with one click.
+>
+> 8. **Notes section uses a different visual language** — `bg-blue-50 border-l-2` nested inside `bg-gray-50 border-l-4` creates a double-border visual that looks unpolished.
+>
+> **Proposed Theme: Clean white card layout with tab navigation**
+> Move away from the "blue header card" pattern used everywhere else. MyBookings should feel like a personal space — lighter, calmer, with white backgrounds and color used only for status badges and CTAs. Think: Notion task list, Linear issues, Calendly upcoming.
+
+---
+
+### MYBOOKINGS REDESIGN TASKS
+
+---
+
+**[BOOK-001] MyBookings: Replace blue-bar card header with a clean text header + summary stats**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **File**: `src/pages/MyBookings.tsx` (lines 167-197)
+- **Description**: The current header is a full-width Card with a blue `#025bae` header strip containing an avatar, "My Bookings" title, and badge counts. This pattern is used on every page in the app — it makes MyBookings feel indistinguishable from Dashboard, Messages, etc. Replace with a lighter, more personal header.
+- **What to replace it with**:
+  1. Remove the entire `<Card>` wrapper around the header. Replace with a simple flex container:
+     ```tsx
+     <div className="flex items-center justify-between mb-6">
+       <div>
+         <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+         <p className="text-gray-500 text-sm mt-1">Manage your appointments and service history</p>
+       </div>
+       <div className="flex items-center gap-3">
+         <div className="text-center px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+           <p className="text-2xl font-bold text-primary">{upcomingBookings.length}</p>
+           <p className="text-xs text-gray-500">Upcoming</p>
+         </div>
+         <div className="text-center px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+           <p className="text-2xl font-bold text-gray-700">{completedBookings.length}</p>
+           <p className="text-xs text-gray-500">Completed</p>
+         </div>
+       </div>
+     </div>
+     ```
+  2. Remove the Avatar from the header — it's already shown in the global nav; duplicating it here is redundant.
+  3. Remove the inline `fontFamily` style.
+- **Acceptance criteria**:
+  - [ ] Header is a simple text heading + stat boxes, no blue card
+  - [ ] Avatar removed from header
+  - [ ] No inline `fontFamily`
+  - [ ] Count stats are visible and accurate
+  - [ ] No TypeScript errors
+
+---
+
+**[BOOK-002] MyBookings: Replace blue section headers with tab navigation (Upcoming | Completed | Cancelled)**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: BOOK-001
+- **File**: `src/pages/MyBookings.tsx` (lines 200-386)
+- **Description**: Currently, "Upcoming Appointments" and "Completed Appointments" are two separate cards with blue headers, requiring the user to scroll past one to see the other. If upcoming is empty, the user sees a big empty card before reaching completed. Replace with a tab bar.
+- **What to do**:
+  1. Add a `const [activeTab, setActiveTab] = useState<'upcoming' | 'completed' | 'cancelled'>('upcoming')` state.
+  2. Add a third filter for cancelled/no-show bookings:
+     ```ts
+     const cancelledBookings = bookings?.filter(b =>
+       b.status === 'cancelled' || b.status === 'no_show'
+     ) || [];
+     ```
+  3. Replace both blue-header `<Card>` sections with a single section:
+     ```tsx
+     {/* Tab bar */}
+     <div className="flex items-center gap-1 border-b border-gray-200 mb-6">
+       {[
+         { id: 'upcoming', label: 'Upcoming', count: upcomingBookings.length },
+         { id: 'completed', label: 'Completed', count: completedBookings.length },
+         { id: 'cancelled', label: 'Cancelled', count: cancelledBookings.length },
+       ].map(tab => (
+         <button
+           key={tab.id}
+           onClick={() => setActiveTab(tab.id)}
+           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+             activeTab === tab.id
+               ? 'border-primary text-primary'
+               : 'border-transparent text-gray-500 hover:text-gray-700'
+           }`}
+         >
+           {tab.label}
+           {tab.count > 0 && (
+             <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+               activeTab === tab.id ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
+             }`}>
+               {tab.count}
+             </span>
+           )}
+         </button>
+       ))}
+     </div>
+
+     {/* Tab content */}
+     <div className="space-y-3">
+       {activeTab === 'upcoming' && (/* render upcoming list or empty state */)}
+       {activeTab === 'completed' && (/* render completed list or empty state */)}
+       {activeTab === 'cancelled' && (/* render cancelled list or empty state */)}
+     </div>
+     ```
+  4. Remove the two separate `<Card>` wrappers with blue headers. The booking items themselves are rendered directly, no wrapping card needed.
+  5. Add a cancelled empty state: "No cancelled bookings — that's a good sign!"
+- **Acceptance criteria**:
+  - [ ] Tab bar with Upcoming, Completed, Cancelled tabs
+  - [ ] Active tab shows count badge and underline in primary color
+  - [ ] Switching tabs shows the correct bookings
+  - [ ] No blue section header cards remain
+  - [ ] Cancelled tab shows cancelled + no_show bookings
+  - [ ] Each tab has an empty state
+  - [ ] No TypeScript errors
+
+---
+
+**[BOOK-003] MyBookings: Replace `border-l-4` booking items with modern discrete cards**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: BOOK-002
+- **File**: `src/pages/MyBookings.tsx`
+- **Description**: Replace the thick-left-bordered rows with clean individual cards. This is the core visual change that makes the page feel modern.
+- **What each booking card should look like**:
+  ```tsx
+  <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-all duration-150">
+    {/* Row 1: Status + Date */}
+    <div className="flex items-center justify-between mb-3">
+      <Badge variant="outline" className={statusClasses}>
+        {statusIcon} {statusLabel}
+      </Badge>
+      <span className="text-sm text-gray-500">
+        {format(parseISO(booking.appointment_date), 'EEE, MMM d, yyyy')}
+      </span>
+    </div>
+
+    {/* Row 2: Service name (large) */}
+    <h3 className="font-semibold text-gray-900 text-base mb-1">{booking.service?.name}</h3>
+
+    {/* Row 3: Provider link */}
+    <p className="text-sm text-gray-500 mb-3">
+      <Link to={`/provider/${booking.provider?.id}`} className="text-primary hover:underline">
+        {booking.provider?.business_name}
+      </Link>
+    </p>
+
+    {/* Row 4: Time + Price + Actions */}
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4 text-sm text-gray-600">
+        <span className="flex items-center gap-1">
+          <Schedule className="w-4 h-4 text-gray-400" />
+          {booking.appointment_time}
+        </span>
+        <span className="font-medium text-gray-900">${booking.total_price}</span>
+      </div>
+      {/* CTA buttons: Cancel (upcoming) or Review (completed) */}
+    </div>
+
+    {/* Notes (if present) */}
+    {booking.notes && (
+      <div className="mt-3 px-3 py-2 bg-gray-50 rounded-md text-xs text-gray-600">
+        <strong>Notes:</strong> {booking.notes}
+      </div>
+    )}
+  </div>
+  ```
+- **Key changes from current**:
+  1. `bg-white rounded-lg border border-gray-200` instead of `bg-gray-50 border-l-4`
+  2. No inline `borderLeftColor` styles
+  3. Status shown as a `<Badge>` (use the existing `getStatusBadge()` function, which is currently defined but never used)
+  4. Date formatted with day name: `EEE, MMM d, yyyy` → "Fri, Feb 21, 2026"
+  5. Notes section: `bg-gray-50 rounded-md` instead of `bg-blue-50 border-l-2`
+  6. Remove `opacity-75` from completed bookings — use full opacity with a muted badge
+  7. Icons use `text-gray-400` instead of `text-primary` — keeps the cards neutral, color only on CTAs
+- **Acceptance criteria**:
+  - [ ] Booking items are `rounded-lg border` cards, not `border-l-4` rows
+  - [ ] No inline `style` on booking items (no `borderLeftColor`, no `color: '#025bae'`)
+  - [ ] Status shown via the `getStatusBadge()` function
+  - [ ] Completed bookings at full opacity
+  - [ ] Notes section uses `bg-gray-50 rounded-md`
+  - [ ] Date includes day name
+  - [ ] No TypeScript errors
+
+---
+
+**[BOOK-004] MyBookings: Add "Book Again" button on completed bookings**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: BOOK-003
+- **File**: `src/pages/MyBookings.tsx`
+- **Description**: Completed bookings currently show only "Leave Review" (or "Reviewed ✓"). Add a "Book Again" button that navigates to the provider's detail page, where the user can rebook.
+- **What to do**:
+  1. Next to the "Leave Review" button on completed bookings, add:
+     ```tsx
+     <Button
+       size="sm"
+       variant="outline"
+       className="text-xs"
+       onClick={() => navigate(`/provider/${booking.provider?.id}`)}
+     >
+       Book Again
+     </Button>
+     ```
+  2. Group both buttons in a `flex gap-2` container.
+  3. If the provider id is missing, don't show "Book Again".
+- **Acceptance criteria**:
+  - [ ] Completed bookings show a "Book Again" button
+  - [ ] Clicking "Book Again" navigates to `/provider/:id`
+  - [ ] "Leave Review" still works alongside "Book Again"
+  - [ ] Button not shown if `booking.provider?.id` is falsy
+  - [ ] No TypeScript errors
+
+---
+
+**[BOOK-005] MyBookings: Improve empty states to be actionable and on-brand**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: BOOK-002
+- **File**: `src/pages/MyBookings.tsx`
+- **Description**: Current empty states use a gray icon and generic text with no CTA button. Make them actionable and domain-specific.
+- **What to change**:
+  1. **Upcoming empty state**:
+     ```tsx
+     <div className="py-12 text-center">
+       <CalendarToday className="w-12 h-12 text-primary/20 mx-auto mb-4" />
+       <h3 className="text-base font-medium text-gray-900 mb-1">No upcoming appointments</h3>
+       <p className="text-sm text-gray-500 mb-4">Browse our services to find a mechanic near you</p>
+       <Button onClick={() => navigate('/services')} className="bg-primary hover:bg-primary/90">
+         Browse Services
+       </Button>
+     </div>
+     ```
+  2. **Completed empty state**:
+     ```tsx
+     <div className="py-12 text-center">
+       <CheckCircle className="w-12 h-12 text-primary/20 mx-auto mb-4" />
+       <h3 className="text-base font-medium text-gray-900 mb-1">No completed services yet</h3>
+       <p className="text-sm text-gray-500">Your service history will appear here after your first visit</p>
+     </div>
+     ```
+  3. **Cancelled empty state** (new, for BOOK-002):
+     ```tsx
+     <div className="py-12 text-center">
+       <Close className="w-12 h-12 text-primary/20 mx-auto mb-4" />
+       <h3 className="text-base font-medium text-gray-900 mb-1">No cancelled bookings</h3>
+       <p className="text-sm text-gray-500">That's a good sign — keep it up!</p>
+     </div>
+     ```
+- **Key changes**: icons use `text-primary/20` not `text-gray-400`, copy is car-domain-specific, CTAs are buttons not links.
+- **Acceptance criteria**:
+  - [ ] Upcoming empty state has "Browse Services" button
+  - [ ] Icons use `text-primary/20`
+  - [ ] Copy mentions car/mechanic/service domain
+  - [ ] Cancelled empty state exists and has friendly copy
+  - [ ] No TypeScript errors
+
+---
+
+**[BOOK-006] MyBookings: Update loading skeleton to match new card layout**
+- **Assigned to**: senior-eng-1
+- **Status**: pending
+- **Blocked by**: BOOK-001, BOOK-003
+- **File**: `src/pages/MyBookings.tsx` (lines 108-144)
+- **Description**: The current loading skeleton shows blue-header cards, which no longer match the redesigned layout (text header + tabs + white cards). Update the skeleton to match.
+- **What to replace it with**:
+  ```tsx
+  <div className="min-h-screen bg-gray-50 py-8">
+    <div className="container mx-auto px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <Skeleton className="h-7 w-40 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-16 w-20 rounded-lg" />
+            <Skeleton className="h-16 w-20 rounded-lg" />
+          </div>
+        </div>
+        {/* Tab skeleton */}
+        <Skeleton className="h-10 w-80 mb-6" />
+        {/* Booking card skeletons */}
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex justify-between mb-3">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-5 w-48 mb-2" />
+            <Skeleton className="h-4 w-32 mb-3" />
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+  ```
+- **Acceptance criteria**:
+  - [ ] Loading skeleton matches the text header + tab + card layout
+  - [ ] No blue header bars in the skeleton
+  - [ ] Skeleton cards look like the actual booking cards
+  - [ ] No TypeScript errors
+
+---
+
+### TECH LEAD REVIEW
+
+---
+
+**[TL-011] Review and prioritize MyBookings redesign tasks**
+- **Assigned to**: tech-lead
+- **Status**: pending
+- **Description**: Review BOOK-001 through BOOK-006. Recommended implementation order:
+  1. **BOOK-001** (clean text header) — removes the blue card header
+  2. **BOOK-002** (tab navigation) — replaces the two blue section headers
+  3. **BOOK-003** (modern cards) — replaces border-l-4 items
+  4. **BOOK-005** (empty states) — depends on tabs existing
+  5. **BOOK-004** (Book Again button) — small addition
+  6. **BOOK-006** (skeleton update) — final polish
+- **Acceptance criteria**:
+  - [ ] Tasks reviewed and assigned
+  - [ ] Implementation order confirmed
+  - [ ] Engineers notified via inbox

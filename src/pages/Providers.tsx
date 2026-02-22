@@ -14,14 +14,13 @@ import { useAllProviders } from '@/hooks/useProvider';
 import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import '@/lib/leaflet-icons';
 import {
   Search,
   Star,
   LocationOn,
   Groups,
-  Business,
-  Phone,
-  Language,
   Tune,
   UnfoldMore,
   Close,
@@ -30,7 +29,14 @@ import {
   ElectricBolt,
   DonutLarge,
   AcUnit,
-  Settings
+  Settings,
+  Verified,
+  Phone,
+  Language,
+  ArrowUpward,
+  ArrowDownward,
+  ViewList,
+  Map,
 } from '@mui/icons-material';
 
 const Providers = () => {
@@ -48,6 +54,7 @@ const Providers = () => {
   const [hasWebsite, setHasWebsite] = useState<boolean | undefined>(undefined);
   const [hasPhone, setHasPhone] = useState<boolean | undefined>(undefined);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Build filters object
   const filters = {
@@ -85,7 +92,7 @@ const Providers = () => {
   const displayCategories = [
     { id: 'all', name: 'All Providers', icon: Groups },
     ...categories.map(category => ({
-      id: category.name,
+      id: category._id,
       name: category.name,
       icon: getIconForCategory(category.name)
     }))
@@ -130,7 +137,7 @@ const Providers = () => {
 
   if (isLoading) {
     return (
-      <div className="py-8">
+      <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4">
           <div className="mb-8">
             <Skeleton className="h-8 w-64 mb-2" />
@@ -154,11 +161,11 @@ const Providers = () => {
   }
 
   return (
-    <div className="py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2" style={{fontFamily: 'Red Hat Display, system-ui, -apple-system, sans-serif'}}>Find Service Providers</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Service Providers</h1>
           <p className="text-gray-600">Connect with verified professionals in your area</p>
         </div>
 
@@ -184,9 +191,9 @@ const Providers = () => {
                 className="pl-10 h-12"
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 flex gap-2">
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-12">
+                <SelectTrigger className="h-12 flex-1">
                   <UnfoldMore className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -198,6 +205,19 @@ const Providers = () => {
                   <SelectItem value="oldest">Oldest First</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 flex-shrink-0"
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                title={sortOrder === 'desc' ? 'Sort ascending' : 'Sort descending'}
+              >
+                {sortOrder === 'desc' ? (
+                  <ArrowDownward className="w-4 h-4" />
+                ) : (
+                  <ArrowUpward className="w-4 h-4" />
+                )}
+              </Button>
             </div>
           </div>
 
@@ -208,9 +228,8 @@ const Providers = () => {
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
                 onClick={() => setSelectedCategory(category.id)}
-                className="flex items-center space-x-2"
                 size="sm"
-                style={selectedCategory === category.id ? {backgroundColor: '#025bae'} : {}}
+                className={selectedCategory === category.id ? "flex items-center space-x-2 bg-primary hover:bg-primary/90" : "flex items-center space-x-2"}
               >
                 <category.icon className="w-4 h-4" />
                 <span>{category.name}</span>
@@ -234,27 +253,48 @@ const Providers = () => {
                     )}
                   </Button>
                 </SheetTrigger>
+
                 <SheetContent className="w-[400px] sm:w-[540px]">
                   <SheetHeader>
                     <SheetTitle>Advanced Filters</SheetTitle>
                   </SheetHeader>
                   <div className="py-6 space-y-6">
                     {/* Rating Filter */}
-                    <div className="space-y-3">
-                      <Label>Minimum Rating</Label>
-                      <div className="px-2">
-                        <Slider
-                          value={minRating}
-                          onValueChange={setMinRating}
-                          max={5}
-                          min={0}
-                          step={0.5}
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
-                          <span>0 stars</span>
-                          <span className="font-medium">{minRating[0]} stars</span>
-                          <span>5 stars</span>
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <Label>Minimum Rating</Label>
+                        <div className="px-2">
+                          <Slider
+                            value={minRating}
+                            onValueChange={setMinRating}
+                            max={5}
+                            min={0}
+                            step={0.5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>0 stars</span>
+                            <span className="font-medium">{minRating[0]} stars</span>
+                            <span>5 stars</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Label>Maximum Rating</Label>
+                        <div className="px-2">
+                          <Slider
+                            value={maxRating}
+                            onValueChange={setMaxRating}
+                            max={5}
+                            min={0}
+                            step={0.5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>0 stars</span>
+                            <span className="font-medium">{maxRating[0]} stars</span>
+                            <span>5 stars</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -302,7 +342,7 @@ const Providers = () => {
                         <Close className="w-4 h-4 mr-2" />
                         Clear All
                       </Button>
-                      <Button onClick={() => setShowFilters(false)} style={{backgroundColor: '#025bae'}}>
+                      <Button onClick={() => setShowFilters(false)} className="bg-primary hover:bg-primary/90">
                         Apply Filters
                       </Button>
                     </div>
@@ -311,159 +351,205 @@ const Providers = () => {
               </Sheet>
 
               <span>{providers.length} providers found</span>
-              
+
               {pagination && pagination.totalProviders > pagination.limit && (
                 <span>• Page {pagination.currentPage} of {pagination.totalPages}</span>
               )}
             </div>
 
-            {/* Clear all filters button */}
-            {activeFiltersCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-gray-500 hover:text-gray-700">
-                <Close className="w-4 h-4 mr-1" />
-                Clear all ({activeFiltersCount})
+            {/* View mode toggle */}
+            <div className="flex items-center border rounded-md overflow-hidden">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-none"
+                onClick={() => setViewMode('list')}
+                title="List view"
+              >
+                <ViewList className="w-4 h-4" />
               </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Providers Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {providers.map((provider) => (
-            <Card key={provider._id} className="shadow-sm hover:shadow-md transition-shadow duration-200 border-0 overflow-hidden">
-              {/* Business image banner */}
-              <img
-                src={provider.businessImage || '/placeholder.svg'}
-                alt="Business"
-                className="w-full h-32 object-cover"
-              />
-              {/* Header with provider info */}
-              <div className="px-4 py-3 text-white" style={{backgroundColor: '#025bae'}}>
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    {provider.profilePhoto ? (
-                      <img
-                        src={provider.profilePhoto}
-                        alt={provider.businessName}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                        <span className="text-white font-semibold text-sm">
-                          {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-lg truncate">{provider.businessName || 'Business Name'}</h3>
-                    <p className="text-white/80 text-sm truncate">
-                      {provider.category || 'General Services'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  {/* Description */}
-                  {provider.businessDescription && (
-                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
-                      {provider.businessDescription}
-                    </p>
-                  )}
-
-                  {/* Location and Contact */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <LocationOn style={{ fontSize: 16, color: '#025bae' }} />
-                      <span className="text-sm text-gray-900 truncate">{provider.businessAddress || 'Location not specified'}</span>
-                    </div>
-                    {provider.businessPhone && (
-                      <div className="flex items-center space-x-2">
-                        <Phone style={{ fontSize: 16, color: '#025bae' }} />
-                        <span className="text-sm text-gray-900">{provider.businessPhone}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Services and Rating */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <div className="flex items-center space-x-1">
-                      {(provider.totalReviews ?? 0) > 0 ? (
-                        <>
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {provider.averageRating}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            ({provider.totalReviews})
-                          </span>
-                        </>
-                      ) : (
-                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-1">
-                        <Business style={{ fontSize: 16, color: '#025bae' }} />
-                        <span className="text-sm text-gray-900">{provider.serviceCount || 0} services</span>
-                      </div>
-                      <Button onClick={() => handleViewProvider(provider._id)} size="sm" style={{backgroundColor: '#025bae'}} className="hover:opacity-90">
-                        View Profile
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Badges */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-wrap gap-1">
-                      {provider.subcategory && (
-                        <Badge variant="outline" className="text-xs">
-                          {provider.subcategory}
-                        </Badge>
-                      )}
-                      {provider.website && (
-                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                          Website
-                        </Badge>
-                      )}
-                    </div>
-                    {(provider as { isVerified?: boolean }).isVerified === true && (
-                      <Badge className="bg-green-50 text-green-700 border-green-200">
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Load More */}
-        {providers.length > 0 && pagination && pagination.currentPage < pagination.totalPages && (
-          <div className="text-center mt-12">
-            <Button variant="outline" size="lg">
-              Load More Providers
-            </Button>
-          </div>
-        )}
-
-        {/* No Results */}
-        {providers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No providers found</h3>
-              <p className="text-gray-600 mb-4">
-                Try adjusting your search terms or filters to find what you're looking for.
-              </p>
-              <Button variant="outline" onClick={clearAllFilters}>
-                Clear Filters
+              <Button
+                variant={viewMode === 'map' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-none"
+                onClick={() => setViewMode('map')}
+                title="Map view"
+              >
+                <Map className="w-4 h-4" />
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Map View */}
+        {viewMode === 'map' && (() => {
+          const mappable = providers.filter(p => p.coordinates?.lat && p.coordinates?.lng);
+          const unmappable = providers.length - mappable.length;
+          const center: [number, number] = mappable.length > 0
+            ? [
+                mappable.reduce((s, p) => s + p.coordinates!.lat, 0) / mappable.length,
+                mappable.reduce((s, p) => s + p.coordinates!.lng, 0) / mappable.length,
+              ]
+            : [54.5, -3.5];
+
+          return (
+            <div className="mb-8">
+              {unmappable > 0 && (
+                <p className="text-sm text-gray-500 mb-3">
+                  {unmappable} provider{unmappable !== 1 ? 's are' : ' is'} not shown on the map because their location is not set.
+                </p>
+              )}
+              <MapContainer
+                center={center}
+                zoom={mappable.length > 0 ? 10 : 6}
+                className="h-[600px] w-full rounded-lg z-0"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {mappable.map((provider) => (
+                  <Marker
+                    key={provider._id}
+                    position={[provider.coordinates!.lat, provider.coordinates!.lng]}
+                  >
+                    <Popup>
+                      <div className="min-w-[180px] space-y-1">
+                        <p className="font-semibold text-sm">{provider.businessName}</p>
+                        {provider.category && (
+                          <p className="text-xs text-gray-500">{provider.category}</p>
+                        )}
+                        {(provider.totalReviews ?? 0) > 0 ? (
+                          <p className="text-xs">⭐ {(provider.averageRating ?? 0).toFixed(1)} ({provider.totalReviews} reviews)</p>
+                        ) : (
+                          <p className="text-xs text-blue-600">New</p>
+                        )}
+                        <button
+                          onClick={() => handleViewProvider(provider._id)}
+                          className="mt-1 text-xs text-blue-600 underline block"
+                        >
+                          View Profile
+                        </button>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          );
+        })()}
+
+        {/* Providers Grid */}
+        {viewMode === 'list' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {providers.map((provider) => (
+                <Card key={provider._id} className="shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border-0 overflow-hidden">
+                  {/* Business image banner */}
+                  <img
+                    src={provider.businessImage || '/placeholder.svg'}
+                    alt="Business"
+                    className="w-full h-32 object-cover"
+                  />
+                  {/* Header with provider info */}
+                  <div className="px-4 py-3 text-white bg-primary">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        {provider.profilePhoto ? (
+                          <img
+                            src={provider.profilePhoto}
+                            alt={provider.businessName}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                            <span className="text-white font-semibold text-sm">
+                              {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-lg truncate flex items-center gap-1.5">
+                          {provider.businessName || 'Business Name'}
+                          {(provider as { isVerified?: boolean }).isVerified === true && (
+                            <Verified className="w-4 h-4 text-white/90 flex-shrink-0" />
+                          )}
+                        </h3>
+                        <p className="text-white/80 text-sm truncate">
+                          {provider.category || 'General Services'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      {/* Description */}
+                      {provider.businessDescription && (
+                        <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
+                          {provider.businessDescription}
+                        </p>
+                      )}
+
+                      {/* Location */}
+                      <div className="flex items-center space-x-2">
+                        <LocationOn className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span className="text-sm text-gray-900 truncate">{provider.businessAddress || 'Location not specified'}</span>
+                      </div>
+
+                      {/* Rating + View Profile */}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                        <div className="flex items-center space-x-1">
+                          {(provider.totalReviews ?? 0) > 0 ? (
+                            <>
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium text-gray-900">
+                                {provider.averageRating}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ({provider.totalReviews})
+                              </span>
+                            </>
+                          ) : (
+                            <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
+                          )}
+                        </div>
+                        <Button onClick={() => handleViewProvider(provider._id)} size="sm" className="bg-primary hover:bg-primary/90">
+                          View Profile
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Load More */}
+            {providers.length > 0 && pagination && pagination.currentPage < pagination.totalPages && (
+              <div className="text-center mt-12">
+                <Button variant="outline" size="lg">
+                  Load More Providers
+                </Button>
+              </div>
+            )}
+
+            {/* No Results */}
+            {providers.length === 0 && (
+              <div className="text-center py-12">
+                <div className="max-w-md mx-auto">
+                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No providers found</h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your search terms or filters to find what you're looking for.
+                  </p>
+                  <Button variant="outline" onClick={clearAllFilters}>
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

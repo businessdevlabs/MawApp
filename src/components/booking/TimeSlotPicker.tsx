@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,11 @@ interface TimeSlot {
   available: boolean;
 }
 
+interface BookedSlot {
+  startTime: string; // "HH:MM"
+  endTime: string;   // "HH:MM"
+}
+
 interface TimeSlotPickerProps {
   selectedDate?: Date;
   selectedTime?: string;
@@ -35,9 +39,17 @@ interface TimeSlotPickerProps {
   onTimeSelect: (time: string) => void;
   duration: number;
   businessHours?: BusinessHours;
+  bookedSlots?: BookedSlot[];
+  loadingAvailability?: boolean;
 }
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+// Convert "HH:MM" to total minutes for easy comparison
+const toMinutes = (time: string): number => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
 
 const TimeSlotPicker = ({
   selectedDate,
@@ -46,6 +58,8 @@ const TimeSlotPicker = ({
   onTimeSelect,
   duration,
   businessHours,
+  bookedSlots = [],
+  loadingAvailability = false,
 }: TimeSlotPickerProps) => {
   const today = startOfDay(new Date());
 
@@ -58,6 +72,18 @@ const TimeSlotPicker = ({
   const hasAvailableSlots = (date: Date): boolean => {
     const hours = getDayHours(date);
     return hours?.isOpen === true && !!hours.open && !!hours.close;
+  };
+
+  const isSlotBooked = (slotStart: string, slotDuration: number): boolean => {
+    const slotStartMin = toMinutes(slotStart);
+    const slotEndMin = slotStartMin + slotDuration;
+
+    return bookedSlots.some(({ startTime, endTime }) => {
+      const bookedStart = toMinutes(startTime);
+      const bookedEnd = toMinutes(endTime);
+      // Overlap: slot starts before booked ends AND slot ends after booked starts
+      return slotStartMin < bookedEnd && slotEndMin > bookedStart;
+    });
   };
 
   const generateTimeSlots = (): TimeSlot[] => {
@@ -75,14 +101,16 @@ const TimeSlotPicker = ({
       const hour = Math.floor(m / 60);
       const minute = m % 60;
       const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      slots.push({ time, available: true });
+      slots.push({ time, available: !isSlotBooked(time, duration) });
     }
     return slots;
   };
 
-  const timeSlots = useMemo(generateTimeSlots, [selectedDate, businessHours, duration]);
+  const timeSlots = useMemo(generateTimeSlots, [selectedDate, businessHours, duration, bookedSlots]);
 
   const noHoursConfigured = !businessHours || Object.values(businessHours).every(d => !d?.isOpen);
+  const availableCount = timeSlots.filter(s => s.available).length;
+  const bookedCount = timeSlots.filter(s => !s.available).length;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -115,6 +143,8 @@ const TimeSlotPicker = ({
         <CardContent>
           {!selectedDate ? (
             <p className="text-gray-500 text-center py-8">Please select a date first</p>
+          ) : loadingAvailability ? (
+            <p className="text-gray-400 text-center py-8 text-sm">Checking availability...</p>
           ) : timeSlots.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No available slots for this day</p>
           ) : (
@@ -125,9 +155,15 @@ const TimeSlotPicker = ({
                   variant={selectedTime === slot.time ? 'default' : 'outline'}
                   size="sm"
                   disabled={!slot.available}
-                  onClick={() => onTimeSelect(slot.time)}
-                  className="text-xs"
-                  style={selectedTime === slot.time ? { backgroundColor: '#025bae' } : undefined}
+                  onClick={() => slot.available && onTimeSelect(slot.time)}
+                  className={`text-xs ${
+                    selectedTime === slot.time ? 'bg-primary' : ''
+                  } ${
+                    !slot.available
+                      ? 'opacity-50 cursor-not-allowed line-through text-gray-400 bg-gray-100 border-gray-200'
+                      : ''
+                  }`}
+                  title={!slot.available ? 'Already booked' : undefined}
                 >
                   {slot.time}
                 </Button>
@@ -135,15 +171,27 @@ const TimeSlotPicker = ({
             </div>
           )}
 
+          {/* Legend */}
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: '#025bae' }}></div>
+              <div className="w-3 h-3 rounded bg-primary"></div>
               <span>Selected time</span>
             </div>
+            {bookedCount > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                <span className="text-gray-500">Already booked ({bookedCount})</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-sm">
               <div className="w-3 h-3 bg-gray-200 border border-gray-300 rounded"></div>
               <span>Closed / unavailable days</span>
             </div>
+            {selectedDate && availableCount > 0 && (
+              <p className="text-xs text-green-600 font-medium">
+                {availableCount} slot{availableCount !== 1 ? 's' : ''} available
+              </p>
+            )}
             {selectedTime && (
               <Badge variant="secondary" className="mt-2">
                 Duration: {duration} minutes

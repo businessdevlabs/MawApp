@@ -4,6 +4,55 @@
 
 ---
 
+## [Senior Eng 1 → Tech Lead] FEAT-014 Complete — Map View on Providers Page
+**Date**: 2026-02-21
+
+Map view implemented and build passing.
+
+### Changes
+**Install**: `react-leaflet@4` (v4 for React 18 compat), `leaflet`, `@types/leaflet`
+
+**`src/index.css`**: Added `@import 'leaflet/dist/leaflet.css'` at the top (before Tailwind directives)
+
+**`src/lib/leaflet-icons.ts`** (new): Fixes broken default Leaflet markers with Vite bundler — deletes `_getIconUrl` and sets `iconUrl`/`iconRetinaUrl`/`shadowUrl` from the leaflet dist images.
+
+**`src/pages/Providers.tsx`**:
+- Added `react-leaflet` imports (`MapContainer`, `TileLayer`, `Marker`, `Popup`) + `leaflet-icons` side-effect import
+- Added `ViewList` / `Map` MUI icon imports
+- Added `viewMode: 'list' | 'map'` state (defaults to `'list'`)
+- Added List/Map toggle button group (right-aligned, next to results count)
+- Map view: filters `providers` to those with `coordinates.lat + coordinates.lng`, computes centroid (fallback `[54.5, -3.5]` UK), renders `<MapContainer h-[600px]>` with OSM tiles, one `<Marker>` + `<Popup>` per mappable provider showing name, category, rating/New badge, and "View Profile" button
+- Shows `"N providers are not shown on the map because their location is not set."` notice when applicable
+- Filters (search, category, rating, etc.) update both views since they feed the same `providers` array
+
+**Build**: `✓ built in 5.83s`, zero TypeScript errors. Status updated to `review`.
+
+---
+
+## [Senior Eng 1 → Tech Lead] FEAT-013 Complete — Providers Filter Fixes
+**Date**: 2026-02-21
+
+All 5 filter bugs fixed. `tsc --noEmit` passes with zero errors.
+
+### Fix 1 — Category filter id (`src/pages/Providers.tsx:88`)
+Changed `id: category.name` → `id: category._id` in `displayCategories`. Category chips now send the MongoDB ObjectId to the API which correctly matches `ServiceProvider.category`.
+
+### Fix 2 — `$or` conflict (`server/routes/providers.js:26-64`)
+Replaced the overwriting `query.$or` pattern with an `andConditions` array. Each `$or` group (search, hasWebsite=false, hasPhone=false) is pushed into `andConditions`, then assigned to `query.$and` if any conditions exist. Also fixed `$ne: null` + `$ne: ''` duplicate-key bug (replaced with `$exists: true, $ne: ''` for the `true` case).
+
+### Fix 3 — Sort order toggle (`src/pages/Providers.tsx`)
+Added `ArrowUpward` / `ArrowDownward` to MUI imports. Added a `size="icon"` toggle button next to the sort dropdown that flips `sortOrder` between `'asc'` and `'desc'`. Wrapped the sort area in a `flex gap-2` container.
+
+### Fix 4 — Max Rating slider (`src/pages/Providers.tsx:241-263`)
+Added a "Maximum Rating" `<Slider>` below the existing Minimum Rating slider in the Advanced Filters sheet. Same pattern (`value={maxRating}`, `onValueChange={setMaxRating}`, `step={0.5}`, `max={5}`). State and clearAllFilters already had `maxRating` / `setMaxRating([5])`.
+
+### Fix 5 — Remove fake 4.8 (`server/routes/providers.js`)
+Removed the `$addFields: { effectiveRating }` stage from both main pipeline and count pipeline. Rating filters now match directly on `averageRating`. Updated `$project.averageRating` to `'$averageRating'` (no fallback). Also removed `|| 4.8` fallback from the single provider detail endpoint (`/:providerId`).
+
+**Build**: `tsc --noEmit` passes. Status updated to `review`.
+
+---
+
 ## [Senior Eng 1 → Tech Lead] UX-FIX-001 + UX-FIX-002 Complete
 **Date**: 2026-02-21
 

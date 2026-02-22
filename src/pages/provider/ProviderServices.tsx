@@ -135,12 +135,23 @@ const ProviderServices = () => {
       errors.price = 'Price is required';
     } else if (parseFloat(formData.price) < 0) {
       errors.price = 'Price must be a positive number';
+    } else if (parseFloat(formData.price) > 10000) {
+      errors.price = 'Price cannot exceed £10,000';
     }
 
     if (!formData.duration) {
       errors.duration = 'Duration is required';
     } else if (parseInt(formData.duration) < 1) {
       errors.duration = 'Duration must be at least 1 minute';
+    } else if (parseInt(formData.duration) > 480) {
+      errors.duration = 'Maximum 8 hours (480 minutes)';
+    }
+
+    if (formData.maxBookingsPerDay) {
+      const mbpd = parseInt(formData.maxBookingsPerDay);
+      if (!Number.isInteger(mbpd) || mbpd < 1 || mbpd > 50) {
+        errors.maxBookingsPerDay = 'Must be a whole number between 1 and 50';
+      }
     }
 
     setFormErrors(errors);
@@ -430,7 +441,11 @@ const ProviderServices = () => {
                                 value={formData.maxBookingsPerDay}
                                 onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
                                 placeholder="10"
+                                className={formErrors.maxBookingsPerDay ? 'border-red-500' : ''}
                               />
+                              {formErrors.maxBookingsPerDay && (
+                                <p className="text-sm text-red-500 mt-1">{formErrors.maxBookingsPerDay}</p>
+                              )}
                             </div>
                           </div>
                           <div>
@@ -697,7 +712,11 @@ const ProviderServices = () => {
                       value={formData.maxBookingsPerDay}
                       onChange={(e) => setFormData({ ...formData, maxBookingsPerDay: e.target.value })}
                       placeholder="10"
+                      className={formErrors.maxBookingsPerDay ? 'border-red-500' : ''}
                     />
+                    {formErrors.maxBookingsPerDay && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.maxBookingsPerDay}</p>
+                    )}
                   </div>
                 </div>
                 <div>

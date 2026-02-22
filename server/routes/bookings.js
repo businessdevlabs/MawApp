@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { body, validationResult, param } from 'express-validator';
 import Booking from '../models/Booking.js';
 import Service from '../models/Service.js';
@@ -43,6 +44,38 @@ const hasTimeConflict = async (providerId, appointmentDate, startTime, endTime, 
   const conflictingBookings = await Booking.find(query);
   return conflictingBookings.length > 0;
 };
+
+// GET /api/bookings/availability?providerId=&date=YYYY-MM-DD — public, no auth required
+// Returns booked time slots for a provider on a given date so the client can grey them out
+router.get('/availability', async (req, res) => {
+  try {
+    const { providerId, date } = req.query;
+
+    if (!providerId || !date) {
+      return res.status(400).json({ error: 'providerId and date are required' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(providerId)) {
+      return res.status(400).json({ error: 'Invalid providerId' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+    }
+
+    const dayStart = new Date(`${date}T00:00:00.000Z`);
+    const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+
+    const bookings = await Booking.find({
+      providerId,
+      appointmentDate: { $gte: dayStart, $lte: dayEnd },
+      status: { $in: ['pending', 'confirmed'] }
+    }).select('startTime endTime -_id');
+
+    res.json({ bookedSlots: bookings.map(b => ({ startTime: b.startTime, endTime: b.endTime })) });
+  } catch (error) {
+    console.error('Availability check error:', error);
+    res.status(500).json({ error: 'Failed to fetch availability' });
+  }
+});
 
 // GET /api/bookings - Get bookings for authenticated user
 router.get('/', authenticateToken, async (req, res) => {
