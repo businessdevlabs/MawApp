@@ -35,14 +35,12 @@ import {
   Language,
   ArrowUpward,
   ArrowDownward,
-  ViewList,
-  Map,
 } from '@mui/icons-material';
 
 const Providers = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -54,7 +52,6 @@ const Providers = () => {
   const [hasWebsite, setHasWebsite] = useState<boolean | undefined>(undefined);
   const [hasPhone, setHasPhone] = useState<boolean | undefined>(undefined);
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Build filters object
   const filters = {
@@ -71,7 +68,7 @@ const Providers = () => {
 
   const { data: providersResponse, isLoading: providersLoading } = useAllProviders(filters);
   const { data: categoriesData, isLoading: categoriesLoading } = useServiceCategories();
-  
+
   const providers = providersResponse?.providers || [];
   const pagination = providersResponse?.pagination;
   const categories = categoriesData?.categories || [];
@@ -80,7 +77,6 @@ const Providers = () => {
 
   const handleViewProvider = (providerId: string) => {
     if (!user) {
-      // Store the intended destination for after login
       localStorage.setItem('redirectAfterLogin', `/provider/${providerId}`);
       navigate('/login');
     } else {
@@ -98,7 +94,6 @@ const Providers = () => {
     }))
   ];
 
-  // Helper function to get appropriate icon for each category
   function getIconForCategory(categoryName: string) {
     switch (categoryName) {
       case 'Engine & Mechanical':      return Build;
@@ -111,7 +106,6 @@ const Providers = () => {
     }
   }
 
-  // Clear all filters function
   const clearAllFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
@@ -124,7 +118,6 @@ const Providers = () => {
     setHasPhone(undefined);
   };
 
-  // Active filters count
   const activeFiltersCount = [
     searchTerm,
     selectedCategory !== 'all' ? selectedCategory : null,
@@ -135,6 +128,16 @@ const Providers = () => {
     hasPhone !== undefined ? hasPhone : null,
   ].filter(Boolean).length;
 
+  // Map data (computed outside JSX for cleaner render)
+  const mappable = providers.filter(p => p.coordinates?.lat && p.coordinates?.lng);
+  const unmappable = providers.length - mappable.length;
+  const mapCenter: [number, number] = mappable.length > 0
+    ? [
+        mappable.reduce((s, p) => s + p.coordinates!.lat, 0) / mappable.length,
+        mappable.reduce((s, p) => s + p.coordinates!.lng, 0) / mappable.length,
+      ]
+    : [54.5, -3.5];
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -143,11 +146,11 @@ const Providers = () => {
             <Skeleton className="h-8 w-64 mb-2" />
             <Skeleton className="h-4 w-96" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i}>
-                <Skeleton className="h-48 w-full" />
-                <CardContent className="p-6">
+                <Skeleton className="h-28 w-full" />
+                <CardContent className="p-4">
                   <Skeleton className="h-6 w-full mb-2" />
                   <Skeleton className="h-4 w-3/4 mb-4" />
                   <Skeleton className="h-8 w-full" />
@@ -238,318 +241,272 @@ const Providers = () => {
           </div>
 
           {/* Filter Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
-              {/* Advanced Filters Sheet */}
-              <Sheet open={showFilters} onOpenChange={setShowFilters}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="relative">
-                    <Tune className="w-4 h-4 mr-2" />
-                    Advanced Filters
-                    {activeFiltersCount > 0 && (
-                      <Badge variant="destructive" className="ml-2 px-1 min-w-[20px] h-5">
-                        {activeFiltersCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </SheetTrigger>
+          <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <Sheet open={showFilters} onOpenChange={setShowFilters}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Tune className="w-4 h-4 mr-2" />
+                  Advanced Filters
+                  {activeFiltersCount > 0 && (
+                    <Badge variant="destructive" className="ml-2 px-1 min-w-[20px] h-5">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
 
-                <SheetContent className="w-[400px] sm:w-[540px]">
-                  <SheetHeader>
-                    <SheetTitle>Advanced Filters</SheetTitle>
-                  </SheetHeader>
-                  <div className="py-6 space-y-6">
-                    {/* Rating Filter */}
-                    <div className="space-y-4">
-                      <div className="space-y-3">
-                        <Label>Minimum Rating</Label>
-                        <div className="px-2">
-                          <Slider
-                            value={minRating}
-                            onValueChange={setMinRating}
-                            max={5}
-                            min={0}
-                            step={0.5}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>0 stars</span>
-                            <span className="font-medium">{minRating[0]} stars</span>
-                            <span>5 stars</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <Label>Maximum Rating</Label>
-                        <div className="px-2">
-                          <Slider
-                            value={maxRating}
-                            onValueChange={setMaxRating}
-                            max={5}
-                            min={0}
-                            step={0.5}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>0 stars</span>
-                            <span className="font-medium">{maxRating[0]} stars</span>
-                            <span>5 stars</span>
-                          </div>
+              <SheetContent className="w-[400px] sm:w-[540px]">
+                <SheetHeader>
+                  <SheetTitle>Advanced Filters</SheetTitle>
+                </SheetHeader>
+                <div className="py-6 space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Label>Minimum Rating</Label>
+                      <div className="px-2">
+                        <Slider
+                          value={minRating}
+                          onValueChange={setMinRating}
+                          max={5}
+                          min={0}
+                          step={0.5}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>0 stars</span>
+                          <span className="font-medium">{minRating[0]} stars</span>
+                          <span>5 stars</span>
                         </div>
                       </div>
                     </div>
-
-                    <Separator />
-
-                    {/* Provider Features */}
-                    <div className="space-y-4">
-                      <Label>Provider Features</Label>
-                      <div className="space-y-3">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox 
-                            id="has-website"
-                            checked={hasWebsite === true}
-                            onCheckedChange={(checked) => 
-                              setHasWebsite(checked ? true : undefined)
-                            }
-                          />
-                          <Label htmlFor="has-website" className="flex items-center space-x-2">
-                            <Language className="w-4 h-4" />
-                            <span>Has Website</span>
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <Checkbox 
-                            id="has-phone"
-                            checked={hasPhone === true}
-                            onCheckedChange={(checked) => 
-                              setHasPhone(checked ? true : undefined)
-                            }
-                          />
-                          <Label htmlFor="has-phone" className="flex items-center space-x-2">
-                            <Phone className="w-4 h-4" />
-                            <span>Has Phone Number</span>
-                          </Label>
+                    <div className="space-y-3">
+                      <Label>Maximum Rating</Label>
+                      <div className="px-2">
+                        <Slider
+                          value={maxRating}
+                          onValueChange={setMaxRating}
+                          max={5}
+                          min={0}
+                          step={0.5}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>0 stars</span>
+                          <span className="font-medium">{maxRating[0]} stars</span>
+                          <span>5 stars</span>
                         </div>
                       </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Clear Filters */}
-                    <div className="flex justify-between pt-4">
-                      <Button variant="outline" onClick={clearAllFilters}>
-                        <Close className="w-4 h-4 mr-2" />
-                        Clear All
-                      </Button>
-                      <Button onClick={() => setShowFilters(false)} className="bg-primary hover:bg-primary/90">
-                        Apply Filters
-                      </Button>
                     </div>
                   </div>
-                </SheetContent>
-              </Sheet>
 
-              <span>{providers.length} providers found</span>
+                  <Separator />
 
-              {pagination && pagination.totalProviders > pagination.limit && (
-                <span>• Page {pagination.currentPage} of {pagination.totalPages}</span>
-              )}
-            </div>
+                  <div className="space-y-4">
+                    <Label>Provider Features</Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id="has-website"
+                          checked={hasWebsite === true}
+                          onCheckedChange={(checked) =>
+                            setHasWebsite(checked ? true : undefined)
+                          }
+                        />
+                        <Label htmlFor="has-website" className="flex items-center space-x-2">
+                          <Language className="w-4 h-4" />
+                          <span>Has Website</span>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id="has-phone"
+                          checked={hasPhone === true}
+                          onCheckedChange={(checked) =>
+                            setHasPhone(checked ? true : undefined)
+                          }
+                        />
+                        <Label htmlFor="has-phone" className="flex items-center space-x-2">
+                          <Phone className="w-4 h-4" />
+                          <span>Has Phone Number</span>
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* View mode toggle */}
-            <div className="flex items-center border rounded-md overflow-hidden">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-none"
-                onClick={() => setViewMode('list')}
-                title="List view"
-              >
-                <ViewList className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'map' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-none"
-                onClick={() => setViewMode('map')}
-                title="Map view"
-              >
-                <Map className="w-4 h-4" />
-              </Button>
-            </div>
+                  <Separator />
+
+                  <div className="flex justify-between pt-4">
+                    <Button variant="outline" onClick={clearAllFilters}>
+                      <Close className="w-4 h-4 mr-2" />
+                      Clear All
+                    </Button>
+                    <Button onClick={() => setShowFilters(false)} className="bg-primary hover:bg-primary/90">
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <span>{providers.length} providers found</span>
+
+            {pagination && pagination.totalProviders > pagination.limit && (
+              <span>• Page {pagination.currentPage} of {pagination.totalPages}</span>
+            )}
           </div>
         </div>
 
-        {/* Map View */}
-        {viewMode === 'map' && (() => {
-          const mappable = providers.filter(p => p.coordinates?.lat && p.coordinates?.lng);
-          const unmappable = providers.length - mappable.length;
-          const center: [number, number] = mappable.length > 0
-            ? [
-                mappable.reduce((s, p) => s + p.coordinates!.lat, 0) / mappable.length,
-                mappable.reduce((s, p) => s + p.coordinates!.lng, 0) / mappable.length,
-              ]
-            : [54.5, -3.5];
-
-          return (
-            <div className="mb-8">
-              {unmappable > 0 && (
-                <p className="text-sm text-gray-500 mb-3">
-                  {unmappable} provider{unmappable !== 1 ? 's are' : ' is'} not shown on the map because their location is not set.
-                </p>
-              )}
-              <MapContainer
-                center={center}
-                zoom={mappable.length > 0 ? 10 : 6}
-                className="h-[600px] w-full rounded-lg z-0"
+        {/* Map — always visible above the list */}
+        <div className="mb-8">
+          {unmappable > 0 && (
+            <p className="text-sm text-gray-500 mb-3">
+              {unmappable} provider{unmappable !== 1 ? 's are' : ' is'} not shown on the map because their location is not set.
+            </p>
+          )}
+          <MapContainer
+            center={mapCenter}
+            zoom={mappable.length > 0 ? 10 : 6}
+            className="h-[350px] w-full rounded-lg z-0"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {mappable.map((provider) => (
+              <Marker
+                key={provider._id}
+                position={[provider.coordinates!.lat, provider.coordinates!.lng]}
               >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {mappable.map((provider) => (
-                  <Marker
-                    key={provider._id}
-                    position={[provider.coordinates!.lat, provider.coordinates!.lng]}
-                  >
-                    <Popup>
-                      <div className="min-w-[180px] space-y-1">
-                        <p className="font-semibold text-sm">{provider.businessName}</p>
-                        {provider.category && (
-                          <p className="text-xs text-gray-500">{provider.category}</p>
-                        )}
-                        {(provider.totalReviews ?? 0) > 0 ? (
-                          <p className="text-xs">⭐ {(provider.averageRating ?? 0).toFixed(1)} ({provider.totalReviews} reviews)</p>
-                        ) : (
-                          <p className="text-xs text-blue-600">New</p>
-                        )}
-                        <button
-                          onClick={() => handleViewProvider(provider._id)}
-                          className="mt-1 text-xs text-blue-600 underline block"
-                        >
-                          View Profile
-                        </button>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-          );
-        })()}
+                <Popup>
+                  <div className="min-w-[180px] space-y-1">
+                    <p className="font-semibold text-sm">{provider.businessName}</p>
+                    {provider.category && (
+                      <p className="text-xs text-gray-500">{provider.category}</p>
+                    )}
+                    {(provider.totalReviews ?? 0) > 0 ? (
+                      <p className="text-xs">⭐ {(provider.averageRating ?? 0).toFixed(1)} ({provider.totalReviews} reviews)</p>
+                    ) : (
+                      <p className="text-xs text-blue-600">New</p>
+                    )}
+                    <button
+                      onClick={() => handleViewProvider(provider._id)}
+                      className="mt-1 text-xs text-blue-600 underline block"
+                    >
+                      View Profile
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
 
         {/* Providers Grid */}
-        {viewMode === 'list' && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {providers.map((provider) => (
-                <Card key={provider._id} className="shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border-0 overflow-hidden">
-                  {/* Business image banner */}
-                  <img
-                    src={provider.businessImage || '/placeholder.svg'}
-                    alt="Business"
-                    className="w-full h-32 object-cover"
-                  />
-                  {/* Header with provider info */}
-                  <div className="px-4 py-3 text-white bg-primary">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        {provider.profilePhoto ? (
-                          <img
-                            src={provider.profilePhoto}
-                            alt={provider.businessName}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                            <span className="text-white font-semibold text-sm">
-                              {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
-                            </span>
-                          </div>
-                        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {providers.map((provider) => (
+            <Card key={provider._id} className="shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border-0 overflow-hidden">
+              {/* Compact header */}
+              <div className="px-3 py-2 text-white bg-primary">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    {/* PROV-002: businessImage → profilePhoto → initial fallback */}
+                    {provider.businessImage || provider.profilePhoto ? (
+                      <img
+                        src={provider.businessImage || provider.profilePhoto}
+                        alt={provider.businessName}
+                        className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30">
+                        <span className="text-white font-semibold text-sm">
+                          {provider.businessName?.charAt(0)?.toUpperCase() || 'P'}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-lg truncate flex items-center gap-1.5">
-                          {provider.businessName || 'Business Name'}
-                          {(provider as { isVerified?: boolean }).isVerified === true && (
-                            <Verified className="w-4 h-4 text-white/90 flex-shrink-0" />
-                          )}
-                        </h3>
-                        <p className="text-white/80 text-sm truncate">
-                          {provider.category || 'General Services'}
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </div>
-
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Description */}
-                      {provider.businessDescription && (
-                        <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
-                          {provider.businessDescription}
-                        </p>
+                  <div className="min-w-0 flex-1">
+                    {/* PROV-003: business name is clickable */}
+                    <h3 className="text-sm font-semibold truncate flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleViewProvider(provider._id)}
+                        className="hover:underline cursor-pointer truncate text-left"
+                      >
+                        {provider.businessName || 'Business Name'}
+                      </button>
+                      {(provider as { isVerified?: boolean }).isVerified === true && (
+                        <Verified className="w-4 h-4 text-white/90 flex-shrink-0" />
                       )}
-
-                      {/* Location */}
-                      <div className="flex items-center space-x-2">
-                        <LocationOn className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="text-sm text-gray-900 truncate">{provider.businessAddress || 'Location not specified'}</span>
-                      </div>
-
-                      {/* Rating + View Profile */}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                        <div className="flex items-center space-x-1">
-                          {(provider.totalReviews ?? 0) > 0 ? (
-                            <>
-                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm font-medium text-gray-900">
-                                {provider.averageRating}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                ({provider.totalReviews})
-                              </span>
-                            </>
-                          ) : (
-                            <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
-                          )}
-                        </div>
-                        <Button onClick={() => handleViewProvider(provider._id)} size="sm" className="bg-primary hover:bg-primary/90">
-                          View Profile
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Load More */}
-            {providers.length > 0 && pagination && pagination.currentPage < pagination.totalPages && (
-              <div className="text-center mt-12">
-                <Button variant="outline" size="lg">
-                  Load More Providers
-                </Button>
-              </div>
-            )}
-
-            {/* No Results */}
-            {providers.length === 0 && (
-              <div className="text-center py-12">
-                <div className="max-w-md mx-auto">
-                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No providers found</h3>
-                  <p className="text-gray-600 mb-4">
-                    Try adjusting your search terms or filters to find what you're looking for.
-                  </p>
-                  <Button variant="outline" onClick={clearAllFilters}>
-                    Clear Filters
-                  </Button>
+                    </h3>
+                    <p className="text-white/80 text-xs truncate">
+                      {provider.category || 'General Services'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            )}
-          </>
+
+              <CardContent className="p-3 space-y-2">
+                {/* Description */}
+                {provider.businessDescription && (
+                  <p className="text-gray-600 text-sm leading-relaxed line-clamp-1">
+                    {provider.businessDescription}
+                  </p>
+                )}
+
+                {/* Location */}
+                <div className="flex items-center space-x-2">
+                  <LocationOn className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm text-gray-900 truncate">{provider.businessAddress || 'Location not specified'}</span>
+                </div>
+
+                {/* Rating + View Profile */}
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <div className="flex items-center space-x-1">
+                    {(provider.totalReviews ?? 0) > 0 ? (
+                      <>
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {provider.averageRating}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ({provider.totalReviews})
+                        </span>
+                      </>
+                    ) : (
+                      <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">New</Badge>
+                    )}
+                  </div>
+                  <Button onClick={() => handleViewProvider(provider._id)} size="sm" className="bg-primary hover:bg-primary/90">
+                    View Profile
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Load More */}
+        {providers.length > 0 && pagination && pagination.currentPage < pagination.totalPages && (
+          <div className="text-center mt-12">
+            <Button variant="outline" size="lg">
+              Load More Providers
+            </Button>
+          </div>
+        )}
+
+        {/* No Results */}
+        {providers.length === 0 && (
+          <div className="text-center py-12">
+            <div className="max-w-md mx-auto">
+              <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No providers found</h3>
+              <p className="text-gray-600 mb-4">
+                Try adjusting your search terms or filters to find what you're looking for.
+              </p>
+              <Button variant="outline" onClick={clearAllFilters}>
+                Clear Filters
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
